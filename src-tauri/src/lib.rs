@@ -102,6 +102,21 @@ fn validate_repo(git_path: String, repo_path: String) -> Result<bool, String> {
 }
 
 #[tauri::command]
+fn fetch_remote(git_path: String, repo_path: String) -> Result<(), String> {
+    let output = Command::new(&git_path)
+        .current_dir(&repo_path)
+        .arg("fetch")
+        .output()
+        .map_err(|e| format!("Failed to execute git fetch: {}", e))?;
+
+    if !output.status.success() {
+        return Err(String::from_utf8_lossy(&output.stderr).to_string());
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
 fn validate_git(git_path: String) -> Result<GitVersion, String> {
     _validate_git(&git_path)
 }
@@ -188,6 +203,7 @@ pub fn run() {
         validate_repo,
         get_commit_info,
         get_changed_files,
+        fetch_remote,
         create_zip
     ])
     .run(tauri::generate_context!())

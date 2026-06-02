@@ -63,6 +63,7 @@
         const isValid = await invoke<boolean>('validate_repo', { gitPath, repoPath: selected });
         if (isValid) {
           repoPath = selected;
+          message = '';
           updateCommitInfo();
         } else {
           isError = true;
@@ -72,6 +73,24 @@
         isError = true;
         message = 'リポジトリの検証に失敗しました: ' + e;
       }
+    }
+  }
+
+  async function fetchRemote() {
+    if (!repoPath || !gitPath) return;
+    isLoading = true;
+    message = 'リモート情報を取得中...';
+    isError = false;
+    try {
+      await invoke('fetch_remote', { gitPath, repoPath });
+      isError = false;
+      message = 'リモート情報の取得に成功しました';
+      updateCommitInfo();
+    } catch (e) {
+      isError = true;
+      message = 'リモート情報の取得に失敗しました: ' + e;
+    } finally {
+      isLoading = false;
     }
   }
 
@@ -161,7 +180,10 @@
 
       <!-- Repo Path -->
       <div class="space-y-2">
-        <label class="text-sm font-medium leading-none" for="repo-path">リポジトリ</label>
+        <label class="text-sm font-medium leading-none" for="repo-path">
+          リポジトリ
+          <span class="ml-2 text-[10px] font-normal text-slate-400">※GitHub等の最新を取得するには参照後に「リモート更新」を押してください</span>
+        </label>
         <div class="flex gap-2">
           <input
             id="repo-path"
@@ -171,9 +193,16 @@
           />
           <button
             onclick={selectRepoPath}
-            class="inline-flex items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-900/90"
+            class="inline-flex items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-900/90 whitespace-nowrap"
           >
             参照
+          </button>
+          <button
+            onclick={fetchRemote}
+            disabled={!repoPath || isLoading}
+            class="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100 disabled:opacity-50 whitespace-nowrap"
+          >
+            リモート更新
           </button>
         </div>
       </div>
