@@ -12,10 +12,21 @@ pub struct GitVersion {
     version: String,
 }
 
-#[tauri::command]
-pub fn validate_repo(git_path: String, repo_path: String) -> Result<bool, String> {
-    let output = Command::new(&git_path)
-        .current_dir(&repo_path)
+#[derive(Serialize, Deserialize)]
+pub struct CommitInfo {
+    hash: String,
+    message: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ChangedFiles {
+    files: Vec<String>,
+}
+
+// Internal logic functions
+fn _validate_repo(git_path: &str, repo_path: &str) -> Result<bool, String> {
+    let output = Command::new(git_path)
+        .current_dir(repo_path)
         .args(["rev-parse", "--git-dir"])
         .output()
         .map_err(|e| format!("Failed to execute git rev-parse: {}", e))?;
@@ -23,9 +34,8 @@ pub fn validate_repo(git_path: String, repo_path: String) -> Result<bool, String
     Ok(output.status.success())
 }
 
-#[tauri::command]
-pub fn validate_git(git_path: String) -> Result<GitVersion, String> {
-    let output = Command::new(&git_path)
+fn _validate_git(git_path: &str) -> Result<GitVersion, String> {
+    let output = Command::new(git_path)
         .arg("--version")
         .output()
         .map_err(|e| format!("Failed to execute git: {}", e))?;
@@ -44,17 +54,10 @@ pub fn validate_git(git_path: String) -> Result<GitVersion, String> {
     }
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct CommitInfo {
-    hash: String,
-    message: String,
-}
-
-#[tauri::command]
-pub fn get_commit_info(git_path: String, repo_path: String, offset: u32) -> Result<CommitInfo, String> {
+fn _get_commit_info(git_path: &str, repo_path: &str, offset: u32) -> Result<CommitInfo, String> {
     let rev = format!("HEAD~{}", offset);
-    let output = Command::new(&git_path)
-        .current_dir(&repo_path)
+    let output = Command::new(git_path)
+        .current_dir(repo_path)
         .args(["log", "--format=%H%n%s", "-1", &rev])
         .output()
         .map_err(|e| format!("Failed to execute git log: {}", e))?;
@@ -71,16 +74,10 @@ pub fn get_commit_info(git_path: String, repo_path: String, offset: u32) -> Resu
     Ok(CommitInfo { hash, message })
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct ChangedFiles {
-    files: Vec<String>,
-}
-
-#[tauri::command]
-pub fn get_changed_files(git_path: String, repo_path: String, offset: u32) -> Result<ChangedFiles, String> {
+fn _get_changed_files(git_path: &str, repo_path: &str, offset: u32) -> Result<ChangedFiles, String> {
     let rev = format!("HEAD~{}", offset);
-    let output = Command::new(&git_path)
-        .current_dir(&repo_path)
+    let output = Command::new(git_path)
+        .current_dir(repo_path)
         .args(["show", "--name-only", "--pretty=", &rev])
         .output()
         .map_err(|e| format!("Failed to execute git show: {}", e))?;
@@ -98,20 +95,37 @@ pub fn get_changed_files(git_path: String, repo_path: String, offset: u32) -> Re
     Ok(ChangedFiles { files })
 }
 
+// Tauri commands
 #[tauri::command]
-pub fn create_zip(
+fn validate_repo(git_path: String, repo_path: String) -> Result<bool, String> {
+    _validate_repo(&git_path, &repo_path)
+}
+
+#[tauri::command]
+fn validate_git(git_path: String) -> Result<GitVersion, String> {
+    _validate_git(&git_path)
+}
+
+#[tauri::command]
+fn get_commit_info(git_path: String, repo_path: String, offset: u32) -> Result<CommitInfo, String> {
+    _get_commit_info(&git_path, &repo_path, offset)
+}
+
+#[tauri::command]
+fn get_changed_files(git_path: String, repo_path: String, offset: u32) -> Result<ChangedFiles, String> {
+    _get_changed_files(&git_path, &repo_path, offset)
+}
+
+#[tauri::command]
+fn create_zip(
     git_path: String,
     repo_path: String,
     offset: u32,
     output_path: String,
 ) -> Result<(), String> {
-    // 1. Get commit info
-    let commit_info = get_commit_info(git_path.clone(), repo_path.clone(), offset)?;
+    let commit_info = _get_commit_info(&git_path, &repo_path, offset)?;
+    let changed_files = _get_changed_files(&git_path, &repo_path, offset)?;
 
-    // 2. Get changed files
-    let changed_files = get_changed_files(git_path.clone(), repo_path.clone(), offset)?;
-
-    // 3. Create ZIP
     let path = Path::new(&output_path);
     let file = File::create(path).map_err(|e| format!("Failed to create ZIP file: {}", e))?;
     let mut zip = zip::ZipWriter::new(file);
@@ -135,7 +149,6 @@ pub fn create_zip(
         }
     }
 
-    // 4. Generate readme.txt
     let now = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
     let mut readme_content = String::new();
     readme_content.push_str("========================================\n");
