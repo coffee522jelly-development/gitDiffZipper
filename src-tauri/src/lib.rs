@@ -3,13 +3,24 @@ use std::fs::File;
 use std::io::{Write, Read};
 use std::path::Path;
 use serde::{Serialize, Deserialize};
-use zip::write::FileOptions;
+use zip::write::SimpleFileOptions;
 use chrono::Local;
 
 #[derive(Serialize, Deserialize)]
 pub struct GitVersion {
     valid: bool,
     version: String,
+}
+
+#[tauri::command]
+pub fn validate_repo(git_path: String, repo_path: String) -> Result<bool, String> {
+    let output = Command::new(&git_path)
+        .current_dir(&repo_path)
+        .args(["rev-parse", "--git-dir"])
+        .output()
+        .map_err(|e| format!("Failed to execute git rev-parse: {}", e))?;
+
+    Ok(output.status.success())
 }
 
 #[tauri::command]
@@ -104,7 +115,7 @@ pub fn create_zip(
     let path = Path::new(&output_path);
     let file = File::create(path).map_err(|e| format!("Failed to create ZIP file: {}", e))?;
     let mut zip = zip::ZipWriter::new(file);
-    let options = FileOptions::default()
+    let options = SimpleFileOptions::default()
         .compression_method(zip::CompressionMethod::Deflated)
         .unix_permissions(0o755);
 
@@ -161,6 +172,7 @@ pub fn run() {
     .plugin(tauri_plugin_store::Builder::default().build())
     .invoke_handler(tauri::generate_handler![
         validate_git,
+        validate_repo,
         get_commit_info,
         get_changed_files,
         create_zip

@@ -59,8 +59,19 @@
       directory: true,
     });
     if (selected && typeof selected === 'string') {
-      repoPath = selected;
-      updateCommitInfo();
+      try {
+        const isValid = await invoke<boolean>('validate_repo', { gitPath, repoPath: selected });
+        if (isValid) {
+          repoPath = selected;
+          updateCommitInfo();
+        } else {
+          isError = true;
+          message = '選択されたフォルダはGitリポジトリではありません';
+        }
+      } catch (e) {
+        isError = true;
+        message = 'リポジトリの検証に失敗しました: ' + e;
+      }
     }
   }
 
@@ -242,6 +253,12 @@
         </div>
       </div>
 
+      {#if isLoading}
+        <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+          <div class="bg-slate-900 h-full animate-progress-indefinite w-1/3"></div>
+        </div>
+      {/if}
+
       <div class="pt-4 text-center">
         <button
           onclick={createZip}
@@ -257,8 +274,18 @@
       </div>
 
       {#if message}
-        <div class={`mt-4 rounded-md p-3 text-sm ${isError ? 'bg-red-50 text-red-900 border border-red-100' : 'bg-green-50 text-green-900 border border-green-100'}`}>
-          {message}
+        <div class={`mt-4 rounded-md p-3 text-sm flex items-start gap-2 ${isError ? 'bg-red-50 text-red-900 border border-red-100' : 'bg-green-50 text-green-900 border border-green-100'}`}>
+          <span class="mt-0.5">
+            {#if isError}
+              ⚠️
+            {:else}
+              ✅
+            {/if}
+          </span>
+          <div>
+            <p class="font-bold">{isError ? 'エラー' : '成功'}</p>
+            <p>{message}</p>
+          </div>
         </div>
       {/if}
     </div>
@@ -268,5 +295,13 @@
 <style>
   :global(body) {
     margin: 0;
+  }
+
+  @keyframes progress-indefinite {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(300%); }
+  }
+  .animate-progress-indefinite {
+    animation: progress-indefinite 2s infinite linear;
   }
 </style>
