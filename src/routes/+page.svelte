@@ -7,6 +7,7 @@
   let gitPath = $state('C:\\Program Files\\Git\\cmd\\git.exe');
   let repoPath = $state('');
   let offset = $state(0);
+  let excludeFilter = $state('.pdf, .zip, .docx');
   let outputPath = $state('');
 
   let gitVersion = $state('');
@@ -23,6 +24,10 @@
     if (savedGitPath) {
       gitPath = savedGitPath;
       validateGit();
+    }
+    const savedExcludeFilter = await store.get<string>('excludeFilter');
+    if (savedExcludeFilter !== null) {
+      excludeFilter = savedExcludeFilter;
     }
   });
 
@@ -127,8 +132,17 @@
       return;
     }
     isLoading = true;
+    const excludePatterns = excludeFilter.split(',').map(p => p.trim()).filter(p => p.length > 0);
     try {
-      await invoke('create_zip', { gitPath, repoPath, offset, outputPath });
+      await invoke('create_zip', {
+        gitPath,
+        repoPath,
+        offset,
+        outputPath,
+        excludePatterns
+      });
+      await store.set('excludeFilter', excludeFilter);
+      await store.save();
       isError = false;
       message = '作成成功';
     } catch (e) {
@@ -175,18 +189,24 @@
       </div>
     </div>
 
-    <!-- Row: Offset & Output -->
+    <!-- Row: Offset & Exclude -->
     <div class="grid grid-cols-2 gap-3">
       <div class="space-y-1">
         <label class="font-semibold text-slate-500" for="offset">対象コミット (HEAD~N)</label>
         <input id="offset" type="number" min="0" bind:value={offset} class="w-full bg-white border rounded px-2 py-1 outline-none focus:border-slate-400 transition-colors" />
       </div>
       <div class="space-y-1">
-        <label class="font-semibold text-slate-500" for="output-path">出力先 (ZIP)</label>
-        <div class="flex gap-1">
-          <input id="output-path" type="text" bind:value={outputPath} class="w-full bg-white border rounded px-2 py-1 outline-none focus:border-slate-400 transition-colors truncate" />
-          <button onclick={selectOutputPath} class="bg-slate-100 hover:bg-slate-200 rounded px-2 py-1 border">...</button>
-        </div>
+        <label class="font-semibold text-slate-500" for="exclude-filter">除外フィルタ (カンマ区切り)</label>
+        <input id="exclude-filter" type="text" bind:value={excludeFilter} placeholder=".pdf, .zip" class="w-full bg-white border rounded px-2 py-1 outline-none focus:border-slate-400 transition-colors truncate" />
+      </div>
+    </div>
+
+    <!-- Row: Output -->
+    <div class="space-y-1">
+      <label class="font-semibold text-slate-500" for="output-path">出力先 (ZIP)</label>
+      <div class="flex gap-1">
+        <input id="output-path" type="text" bind:value={outputPath} class="w-full bg-white border rounded px-2 py-1 outline-none focus:border-slate-400 transition-colors truncate" />
+        <button onclick={selectOutputPath} class="bg-slate-100 hover:bg-slate-200 rounded px-2 py-1 border">...</button>
       </div>
     </div>
 

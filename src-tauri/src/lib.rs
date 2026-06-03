@@ -137,6 +137,7 @@ fn create_zip(
     repo_path: String,
     offset: u32,
     output_path: String,
+    exclude_patterns: Vec<String>,
 ) -> Result<(), String> {
     let commit_info = _get_commit_info(&git_path, &repo_path, offset)?;
     let changed_files = _get_changed_files(&git_path, &repo_path, offset)?;
@@ -148,9 +149,23 @@ fn create_zip(
         .compression_method(zip::CompressionMethod::Deflated)
         .unix_permissions(0o755);
 
+    let lower_excludes: Vec<String> = exclude_patterns.iter().map(|s| s.to_lowercase()).collect();
+
+    let mut included_files = Vec::new();
     for file_path_str in &changed_files.files {
+        let lower_path = file_path_str.to_lowercase();
+        let should_exclude = lower_excludes.iter().any(|p| {
+            let p_trim = p.trim();
+            !p_trim.is_empty() && lower_path.contains(p_trim)
+        });
+
+        if should_exclude {
+            continue;
+        }
+
         let full_path = Path::new(&repo_path).join(file_path_str);
         if full_path.is_file() {
+            included_files.push(file_path_str.clone());
             let mut f = File::open(&full_path)
                 .map_err(|e| format!("Failed to open file {}: {}", file_path_str, e))?;
             let mut buffer = Vec::new();
@@ -172,9 +187,12 @@ fn create_zip(
     readme_content.push_str(&format!("Commit : {}\n", commit_info.hash));
     readme_content.push_str(&format!("Message: {}\n", commit_info.message));
     readme_content.push_str(&format!("Date   : {}\n\n", now));
-    readme_content.push_str(&format!("Files  : {}\n\n", changed_files.files.len()));
-    readme_content.push_str("----------------------------------------\n");
-    for file_path_str in &changed_files.files {
+    readme_content.push_str(&format!("Files  : {}\n", included_files.len()));
+    if !exclude_patterns.is_empty() {
+        readme_content.push_str(&format!("Exclude: {}\n", exclude_patterns.join(", ")));
+    }
+    readme_content.push_str("\n----------------------------------------\n");
+    for file_path_str in &included_files {
         readme_content.push_str(file_path_str);
         readme_content.push_str("\n");
     }
