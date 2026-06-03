@@ -34,10 +34,10 @@
         await store.set('gitPath', gitPath);
         await store.save();
       } else {
-        gitVersion = '指定されたファイルはGitではありません';
+        gitVersion = 'Gitではありません';
       }
     } catch (e) {
-      gitVersion = 'Gitの検証に失敗しました';
+      gitVersion = '検証失敗';
     }
   }
 
@@ -67,11 +67,11 @@
           updateCommitInfo();
         } else {
           isError = true;
-          message = '選択されたフォルダはGitリポジトリではありません';
+          message = 'Gitリポジトリではありません';
         }
       } catch (e) {
         isError = true;
-        message = 'リポジトリの検証に失敗しました: ' + e;
+        message = '検証失敗: ' + e;
       }
     }
   }
@@ -79,16 +79,16 @@
   async function fetchRemote() {
     if (!repoPath || !gitPath) return;
     isLoading = true;
-    message = 'リモート情報を取得中...';
+    message = '更新中...';
     isError = false;
     try {
       await invoke('fetch_remote', { gitPath, repoPath });
       isError = false;
-      message = 'リモート情報の取得に成功しました';
+      message = '更新完了';
       updateCommitInfo();
     } catch (e) {
       isError = true;
-      message = 'リモート情報の取得に失敗しました: ' + e;
+      message = '失敗: ' + e;
     } finally {
       isLoading = false;
     }
@@ -96,7 +96,7 @@
 
   async function selectOutputPath() {
     const selected = await save({
-      filters: [{ name: 'ZIP Archive', extensions: ['zip'] }],
+      filters: [{ name: 'ZIP', extensions: ['zip'] }],
       defaultPath: 'patch.zip'
     });
     if (selected) {
@@ -123,17 +123,17 @@
   async function createZip() {
     if (!gitPath || !repoPath || !outputPath) {
       isError = true;
-      message = 'すべての項目を入力してください';
+      message = '未入力項目があります';
       return;
     }
     isLoading = true;
     try {
       await invoke('create_zip', { gitPath, repoPath, offset, outputPath });
       isError = false;
-      message = 'ZIP作成に成功しました';
+      message = '作成成功';
     } catch (e) {
       isError = true;
-      message = 'ZIP作成に失敗しました: ' + e;
+      message = '作成失敗: ' + e;
     } finally {
       isLoading = false;
     }
@@ -147,190 +147,134 @@
 
 </script>
 
-<div class="min-h-screen bg-slate-50 p-4 font-sans text-slate-900">
-  <div class="mx-auto max-w-2xl space-y-6">
-    <header>
-      <h1 class="text-2xl font-bold">Git差分ZIP作成ツール</h1>
-    </header>
+<div class="h-screen bg-slate-50 flex flex-col overflow-hidden text-slate-800 text-xs select-none">
+  <header class="bg-white border-b px-3 py-2 flex justify-between items-center shrink-0">
+    <h1 class="font-bold tracking-tight">gitDiffZipper</h1>
+    {#if gitVersion}
+      <span class="text-[10px] text-slate-400 truncate max-w-[150px]">{gitVersion}</span>
+    {/if}
+  </header>
 
-    <div class="rounded-lg border bg-white p-6 shadow-sm space-y-4">
-      <!-- Git Path -->
-      <div class="space-y-2">
-        <label class="text-sm font-medium leading-none" for="git-path">Git実行ファイル</label>
-        <div class="flex gap-2">
-          <input
-            id="git-path"
-            type="text"
-            bind:value={gitPath}
-            class="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
-          />
-          <button
-            onclick={selectGitPath}
-            class="inline-flex items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-900/90"
-          >
-            参照
-          </button>
+  <main class="flex-1 overflow-y-auto p-3 space-y-3">
+    <!-- Row: Git & Repo -->
+    <div class="grid grid-cols-2 gap-3">
+      <div class="space-y-1">
+        <label class="font-semibold text-slate-500" for="git-path">Git.exe</label>
+        <div class="flex gap-1">
+          <input id="git-path" type="text" bind:value={gitPath} class="w-full bg-white border rounded px-2 py-1 outline-none focus:border-slate-400 transition-colors truncate" />
+          <button onclick={selectGitPath} class="bg-slate-100 hover:bg-slate-200 rounded px-2 py-1 border">...</button>
         </div>
-        {#if gitVersion}
-          <p class="text-xs text-slate-500">{gitVersion}</p>
+      </div>
+      <div class="space-y-1">
+        <label class="font-semibold text-slate-500" for="repo-path">リポジトリ</label>
+        <div class="flex gap-1">
+          <input id="repo-path" type="text" bind:value={repoPath} class="w-full bg-white border rounded px-2 py-1 outline-none focus:border-slate-400 transition-colors truncate" />
+          <button onclick={selectRepoPath} class="bg-slate-100 hover:bg-slate-200 rounded px-2 py-1 border">...</button>
+          <button onclick={fetchRemote} disabled={!repoPath || isLoading} class="bg-slate-100 hover:bg-slate-200 rounded px-2 py-1 border disabled:opacity-30">↻</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row: Offset & Output -->
+    <div class="grid grid-cols-2 gap-3">
+      <div class="space-y-1">
+        <label class="font-semibold text-slate-500" for="offset">対象コミット (HEAD~N)</label>
+        <input id="offset" type="number" min="0" bind:value={offset} class="w-full bg-white border rounded px-2 py-1 outline-none focus:border-slate-400 transition-colors" />
+      </div>
+      <div class="space-y-1">
+        <label class="font-semibold text-slate-500" for="output-path">出力先 (ZIP)</label>
+        <div class="flex gap-1">
+          <input id="output-path" type="text" bind:value={outputPath} class="w-full bg-white border rounded px-2 py-1 outline-none focus:border-slate-400 transition-colors truncate" />
+          <button onclick={selectOutputPath} class="bg-slate-100 hover:bg-slate-200 rounded px-2 py-1 border">...</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Commit Preview -->
+    <div class="space-y-1">
+      <div class="flex justify-between items-baseline">
+        <label class="font-semibold text-slate-500">コミット情報</label>
+        {#if commitInfo}
+          <span class="text-[10px] font-mono text-slate-400">{commitInfo.hash.slice(0,7)}</span>
         {/if}
       </div>
-
-      <hr class="border-slate-100" />
-
-      <!-- Repo Path -->
-      <div class="space-y-2">
-        <label class="text-sm font-medium leading-none" for="repo-path">
-          リポジトリ
-          <span class="ml-2 text-[10px] font-normal text-slate-400">※GitHub等の最新を取得するには参照後に「リモート更新」を押してください</span>
-        </label>
-        <div class="flex gap-2">
-          <input
-            id="repo-path"
-            type="text"
-            bind:value={repoPath}
-            class="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
-          />
-          <button
-            onclick={selectRepoPath}
-            class="inline-flex items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-900/90 whitespace-nowrap"
-          >
-            参照
-          </button>
-          <button
-            onclick={fetchRemote}
-            disabled={!repoPath || isLoading}
-            class="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100 disabled:opacity-50 whitespace-nowrap"
-          >
-            リモート更新
-          </button>
-        </div>
+      <div class="bg-white border rounded p-2 h-12 overflow-y-auto">
+        {#if commitInfo}
+          <p class="leading-tight">{commitInfo.message}</p>
+        {:else}
+          <p class="text-slate-300 italic">情報なし</p>
+        {/if}
       </div>
-
-      <hr class="border-slate-100" />
-
-      <!-- Offset -->
-      <div class="space-y-2">
-        <label class="text-sm font-medium leading-none" for="offset">対象コミット</label>
-        <div class="flex items-center gap-4">
-          <input
-            id="offset"
-            type="number"
-            min="0"
-            bind:value={offset}
-            class="flex h-10 w-20 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
-          />
-          <span class="text-xs text-slate-500">
-            0 = 最新, 1 = 1個前, 2 = 2個前
-          </span>
-        </div>
-      </div>
-
-      <hr class="border-slate-100" />
-
-      <!-- Commit Info -->
-      <div class="space-y-2">
-        <label class="text-sm font-medium leading-none">コミット情報</label>
-        <div class="rounded-md border border-slate-100 bg-slate-50 p-3 text-sm min-h-[4rem]">
-          {#if commitInfo}
-            <p class="font-mono text-xs">{commitInfo.hash}</p>
-            <p class="mt-1">{commitInfo.message}</p>
-          {:else}
-            <p class="text-slate-400">情報なし</p>
-          {/if}
-        </div>
-      </div>
-
-      <hr class="border-slate-100" />
-
-      <!-- Changed Files -->
-      <div class="space-y-2">
-        <label class="text-sm font-medium leading-none">
-          変更ファイル（{changedFiles.length}件）
-        </label>
-        <div class="rounded-md border border-slate-100 bg-slate-50 p-3 text-sm h-32 overflow-y-auto font-mono text-xs">
-          {#if changedFiles.length > 0}
-            <ul class="space-y-1">
-              {#each changedFiles as file}
-                <li>{file}</li>
-              {/each}
-            </ul>
-          {:else}
-            <p class="text-slate-400 italic">変更なし</p>
-          {/if}
-        </div>
-      </div>
-
-      <hr class="border-slate-100" />
-
-      <!-- Output Path -->
-      <div class="space-y-2">
-        <label class="text-sm font-medium leading-none" for="output-path">出力先</label>
-        <div class="flex gap-2">
-          <input
-            id="output-path"
-            type="text"
-            bind:value={outputPath}
-            class="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
-          />
-          <button
-            onclick={selectOutputPath}
-            class="inline-flex items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-900/90"
-          >
-            参照
-          </button>
-        </div>
-      </div>
-
-      {#if isLoading}
-        <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-          <div class="bg-slate-900 h-full animate-progress-indefinite w-1/3"></div>
-        </div>
-      {/if}
-
-      <div class="pt-4 text-center">
-        <button
-          onclick={createZip}
-          disabled={isLoading}
-          class="inline-flex h-12 w-full max-w-xs items-center justify-center rounded-md bg-slate-900 px-8 py-2 text-base font-bold text-white shadow transition-colors hover:bg-slate-900/90 disabled:opacity-50"
-        >
-          {#if isLoading}
-            作成中...
-          {:else}
-            ZIP作成
-          {/if}
-        </button>
-      </div>
-
-      {#if message}
-        <div class={`mt-4 rounded-md p-3 text-sm flex items-start gap-2 ${isError ? 'bg-red-50 text-red-900 border border-red-100' : 'bg-green-50 text-green-900 border border-green-100'}`}>
-          <span class="mt-0.5">
-            {#if isError}
-              ⚠️
-            {:else}
-              ✅
-            {/if}
-          </span>
-          <div>
-            <p class="font-bold">{isError ? 'エラー' : '成功'}</p>
-            <p>{message}</p>
-          </div>
-        </div>
-      {/if}
     </div>
-  </div>
+
+    <!-- Files Preview -->
+    <div class="space-y-1 flex flex-col flex-1 min-h-0">
+      <label class="font-semibold text-slate-500">変更ファイル ({changedFiles.length})</label>
+      <div class="bg-white border rounded p-2 flex-1 overflow-y-auto font-mono text-[10px] leading-tight min-h-[80px]">
+        {#if changedFiles.length > 0}
+          <ul class="divide-y divide-slate-50">
+            {#each changedFiles as file}
+              <li class="py-0.5 truncate">{file}</li>
+            {/each}
+          </ul>
+        {:else}
+          <p class="text-slate-300 italic">変更なし</p>
+        {/if}
+      </div>
+    </div>
+  </main>
+
+  <footer class="bg-white border-t p-2 space-y-2 shrink-0">
+    {#if isLoading}
+      <div class="w-full bg-slate-100 h-1 rounded-full overflow-hidden">
+        <div class="bg-slate-800 h-full animate-progress w-1/3"></div>
+      </div>
+    {/if}
+
+    <div class="flex items-center gap-3">
+      <div class="flex-1 min-w-0">
+        {#if message}
+          <p class={`truncate font-bold ${isError ? 'text-red-600' : 'text-green-600'}`}>
+            {isError ? '× ' : '✓ '}{message}
+          </p>
+        {/if}
+      </div>
+      <button
+        onclick={createZip}
+        disabled={isLoading}
+        class="bg-slate-800 hover:bg-slate-900 text-white font-bold rounded px-6 py-2 transition-all disabled:opacity-50 shadow-sm whitespace-nowrap"
+      >
+        {isLoading ? '作成中...' : 'ZIP作成'}
+      </button>
+    </div>
+  </footer>
 </div>
 
 <style>
-  :global(body) {
+  :global(html, body) {
+    height: 100%;
     margin: 0;
+    overflow: hidden;
   }
 
-  @keyframes progress-indefinite {
+  @keyframes progress {
     0% { transform: translateX(-100%); }
     100% { transform: translateX(300%); }
   }
-  .animate-progress-indefinite {
-    animation: progress-indefinite 2s infinite linear;
+  .animate-progress {
+    animation: progress 1.5s infinite linear;
+  }
+
+  /* Compact scrollbar */
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 2px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #cbd5e1;
   }
 </style>
