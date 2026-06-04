@@ -58,26 +58,31 @@
     }
   }
 
+  async function validateRepo(path: string) {
+    if (!path || !gitPath) return;
+    try {
+      const isValid = await invoke<boolean>('validate_repo', { gitPath, repoPath: path });
+      if (isValid) {
+        repoPath = path;
+        message = '';
+        updateCommitInfo();
+      } else {
+        isError = true;
+        message = 'Gitリポジトリではありません';
+      }
+    } catch (e) {
+      isError = true;
+      message = '検証失敗: ' + e;
+    }
+  }
+
   async function selectRepoPath() {
     const selected = await open({
       multiple: false,
       directory: true,
     });
     if (selected && typeof selected === 'string') {
-      try {
-        const isValid = await invoke<boolean>('validate_repo', { gitPath, repoPath: selected });
-        if (isValid) {
-          repoPath = selected;
-          message = '';
-          updateCommitInfo();
-        } else {
-          isError = true;
-          message = 'Gitリポジトリではありません';
-        }
-      } catch (e) {
-        isError = true;
-        message = '検証失敗: ' + e;
-      }
+      validateRepo(selected);
     }
   }
 
@@ -182,7 +187,14 @@
       <div class="space-y-1">
         <label class="font-semibold text-slate-500" for="repo-path">リポジトリ</label>
         <div class="flex gap-1">
-          <input id="repo-path" type="text" bind:value={repoPath} class="w-full bg-white border rounded px-2 py-1 outline-none focus:border-slate-400 transition-colors truncate" />
+          <input
+            id="repo-path"
+            type="text"
+            bind:value={repoPath}
+            onchange={() => validateRepo(repoPath)}
+            placeholder="C:\Project"
+            class="w-full bg-white border rounded px-2 py-1 outline-none focus:border-slate-400 transition-colors truncate"
+          />
           <button onclick={selectRepoPath} class="bg-slate-100 hover:bg-slate-200 rounded px-2 py-1 border">...</button>
           <button onclick={fetchRemote} disabled={!repoPath || isLoading} class="bg-slate-100 hover:bg-slate-200 rounded px-2 py-1 border disabled:opacity-30">↻</button>
         </div>

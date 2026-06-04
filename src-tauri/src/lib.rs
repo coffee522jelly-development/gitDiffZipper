@@ -23,22 +23,35 @@ pub struct ChangedFiles {
     files: Vec<String>,
 }
 
+// Helper to clean paths (remove quotes)
+fn clean_path(path: &str) -> String {
+    path.trim().trim_matches('"').trim_matches('\'').to_string()
+}
+
 // Internal logic functions
 fn _validate_repo(git_path: &str, repo_path: &str) -> Result<bool, String> {
-    let output = Command::new(git_path)
-        .current_dir(repo_path)
+    let git_path = clean_path(git_path);
+    let repo_path = clean_path(repo_path);
+
+    if !Path::new(&repo_path).exists() {
+        return Err(format!("パスが存在しません: {}", repo_path));
+    }
+
+    let output = Command::new(&git_path)
+        .current_dir(&repo_path)
         .args(["rev-parse", "--git-dir"])
         .output()
-        .map_err(|e| format!("Failed to execute git rev-parse: {}", e))?;
+        .map_err(|e| format!("Git実行エラー ({}): {}", git_path, e))?;
 
     Ok(output.status.success())
 }
 
 fn _validate_git(git_path: &str) -> Result<GitVersion, String> {
-    let output = Command::new(git_path)
+    let git_path = clean_path(git_path);
+    let output = Command::new(&git_path)
         .arg("--version")
         .output()
-        .map_err(|e| format!("Failed to execute git: {}", e))?;
+        .map_err(|e| format!("Git実行エラー ({}): {}", git_path, e))?;
 
     if output.status.success() {
         let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
@@ -55,15 +68,21 @@ fn _validate_git(git_path: &str) -> Result<GitVersion, String> {
 }
 
 fn _get_commit_info(git_path: &str, repo_path: &str, offset: u32) -> Result<CommitInfo, String> {
+    let git_path = clean_path(git_path);
+    let repo_path = clean_path(repo_path);
     let rev = format!("HEAD~{}", offset);
-    let output = Command::new(git_path)
-        .current_dir(repo_path)
+    let output = Command::new(&git_path)
+        .current_dir(&repo_path)
         .args(["log", "--format=%H%n%s", "-1", &rev])
         .output()
-        .map_err(|e| format!("Failed to execute git log: {}", e))?;
+        .map_err(|e| format!("git log 実行エラー: {}", e))?;
 
     if !output.status.success() {
-        return Err(String::from_utf8_lossy(&output.stderr).to_string());
+        let err = String::from_utf8_lossy(&output.stderr).to_string();
+        if err.contains("ambiguous argument") {
+            return Err("指定されたコミットが存在しません".to_string());
+        }
+        return Err(format!("Gitエラー: {}", err));
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -75,15 +94,17 @@ fn _get_commit_info(git_path: &str, repo_path: &str, offset: u32) -> Result<Comm
 }
 
 fn _get_changed_files(git_path: &str, repo_path: &str, offset: u32) -> Result<ChangedFiles, String> {
+    let git_path = clean_path(git_path);
+    let repo_path = clean_path(repo_path);
     let rev = format!("HEAD~{}", offset);
-    let output = Command::new(git_path)
-        .current_dir(repo_path)
+    let output = Command::new(&git_path)
+        .current_dir(&repo_path)
         .args(["show", "--name-only", "--pretty=", &rev])
         .output()
-        .map_err(|e| format!("Failed to execute git show: {}", e))?;
+        .map_err(|e| format!("git show 実行エラー: {}", e))?;
 
     if !output.status.success() {
-        return Err(String::from_utf8_lossy(&output.stderr).to_string());
+        return Err(format!("Gitエラー: {}", String::from_utf8_lossy(&output.stderr)));
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -103,14 +124,16 @@ fn validate_repo(git_path: String, repo_path: String) -> Result<bool, String> {
 
 #[tauri::command]
 fn fetch_remote(git_path: String, repo_path: String) -> Result<(), String> {
+    let git_path = clean_path(&git_path);
+    let repo_path = clean_path(&repo_path);
     let output = Command::new(&git_path)
         .current_dir(&repo_path)
         .arg("fetch")
         .output()
-        .map_err(|e| format!("Failed to execute git fetch: {}", e))?;
+        .map_err(|e| format!("git fetch 実行エラー: {}", e))?;
 
     if !output.status.success() {
-        return Err(String::from_utf8_lossy(&output.stderr).to_string());
+        return Err(format!("Gitエラー: {}", String::from_utf8_lossy(&output.stderr)));
     }
 
     Ok(())
@@ -139,6 +162,8 @@ fn create_zip(
     output_path: String,
     exclude_patterns: Vec<String>,
 ) -> Result<(), String> {
+    let git_path = clean_path(&git_path);
+    let repo_path = clean_path(&repo_path);
     let commit_info = _get_commit_info(&git_path, &repo_path, offset)?;
     let changed_files = _get_changed_files(&git_path, &repo_path, offset)?;
 
