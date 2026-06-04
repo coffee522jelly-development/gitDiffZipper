@@ -217,7 +217,7 @@
     <div class="space-y-1">
       <label class="font-semibold text-slate-500" for="output-path">出力先 (ZIP)</label>
       <div class="flex gap-1">
-        <input id="output-path" type="text" bind:value={outputPath} class="w-full bg-white border rounded px-2 py-1 outline-none focus:border-slate-400 transition-colors truncate" />
+          <input id="output-path" type="text" bind:value={outputPath} placeholder="C:\temp\patch.zip" class="w-full bg-white border rounded px-2 py-1 outline-none focus:border-slate-400 transition-colors truncate" />
         <button onclick={selectOutputPath} class="bg-slate-100 hover:bg-slate-200 rounded px-2 py-1 border">...</button>
       </div>
     </div>

@@ -164,11 +164,21 @@ fn create_zip(
 ) -> Result<(), String> {
     let git_path = clean_path(&git_path);
     let repo_path = clean_path(&repo_path);
+    let output_path = clean_path(&output_path);
+
     let commit_info = _get_commit_info(&git_path, &repo_path, offset)?;
     let changed_files = _get_changed_files(&git_path, &repo_path, offset)?;
 
     let path = Path::new(&output_path);
-    let file = File::create(path).map_err(|e| format!("Failed to create ZIP file: {}", e))?;
+
+    // Ensure parent directory exists
+    if let Some(parent) = path.parent() {
+        if !parent.as_os_str().is_empty() && !parent.exists() {
+            std::fs::create_dir_all(parent).map_err(|e| format!("出力先フォルダの作成に失敗しました: {}", e))?;
+        }
+    }
+
+    let file = File::create(path).map_err(|e| format!("ZIPファイルの作成に失敗しました ({}): {}", output_path, e))?;
     let mut zip = zip::ZipWriter::new(file);
     let options = SimpleFileOptions::default()
         .compression_method(zip::CompressionMethod::Deflated)
