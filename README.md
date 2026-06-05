@@ -1,42 +1,53 @@
-# sv
+# Git差分ZIP作成ツール (gitDiffZipper)
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Gitリポジトリから指定したコミットの変更ファイルを抽出し、ZIPファイルとして出力するWindows向けデスクトップアプリケーションです。
 
-## Creating a project
+## 主な機能
 
-If you're seeing this, you've probably already done this step. Congrats!
+- **差分抽出**: 指定したコミット（最新からN個前）の変更ファイルを自動抽出。
+- **ZIP生成**: フォルダ構造を維持したままZIPアーカイブを作成。
+- **readme.txt自動生成**: コミットハッシュ、メッセージ、日時、ファイル一覧を含むメタデータをZIP内に同梱。
+- **除外フィルタ**: 特定の拡張子やファイル名パターンを指定して除外可能。
+- **リモート更新**: アプリ内から `git fetch` を実行し、GitHub等の最新情報を取得。
+- **設定保存**: Git実行ファイルのパスや除外フィルタの設定を自動で保持。
+- **ミニマルデザイン**: デスクトップで邪魔にならない高密度・省スペースなUI。
 
-```sh
-# create a new project
-npx sv create my-app
-```
+## 動作要件
 
-To recreate this project with the same configuration:
+- Windows 10 / 11
+- Git for Windows がインストールされていること（PATH設定は不要です）
 
-```sh
-# recreate this project
-npx sv@0.15.3 create --template minimal --types ts --add tailwindcss="plugins:none" sveltekit-adapter="adapter:static" --no-download-check --no-install .
-```
+## 使い方
 
-## Developing
+1. **Git実行ファイルの設定**: `git.exe` の場所を指定します（初回のみ）。
+2. **リポジトリの選択**: 対象となるGitリポジトリのフォルダを選択します。
+3. **対象コミットの指定**:
+   - `0`: 最新のコミット
+   - `1`: 1つ前のコミット
+   - `N`: N個前のコミット
+4. **（任意）除外フィルタ**: 除外したいパターン（例: `.pdf, .zip`）を入力します。
+5. **出力先の指定**: 保存するZIPファイルの名前と場所を指定します。
+6. **ZIP作成**: ボタンを押すと処理が開始されます。
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+## 開発者向け情報
 
-```sh
+### 技術スタック
+- **Backend**: Rust / Tauri v2
+- **Frontend**: Svelte 5 (Runes) / TypeScript
+- **Styling**: Tailwind CSS
+
+### ビルド方法
+
+```bash
+# 依存関係のインストール
+npm install
+
+# 開発モードの起動
 npm run dev
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+# インストーラーのビルド (msi, nsis)
+npm run tauri build
 ```
 
-## Building
-
-To create a production version of your app:
-
-```sh
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+---
+v1.1
