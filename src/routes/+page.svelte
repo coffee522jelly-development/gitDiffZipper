@@ -116,6 +116,7 @@
 
   async function updateCommitInfo() {
     if (!repoPath || !gitPath) return;
+    isLoading = true;
     try {
       commitInfo = await invoke('get_commit_info', { gitPath, repoPath, offset });
       const filesResult = await invoke<{files: string[]}>('get_changed_files', { gitPath, repoPath, offset });
@@ -127,6 +128,8 @@
       changedFiles = [];
       isError = true;
       message = String(e);
+    } finally {
+      isLoading = false;
     }
   }
 
@@ -264,9 +267,9 @@
     {/if}
 
     <div class="flex items-center gap-3">
-      <div class="flex-1 min-w-0">
+      <div class="flex-1 min-w-0 max-h-24 overflow-y-auto">
         {#if message}
-          <p class={`truncate font-bold ${isError ? 'text-red-600' : 'text-green-600'}`}>
+          <p class={`text-[10px] whitespace-pre-wrap leading-tight font-bold ${isError ? 'text-red-600' : 'text-green-600'}`}>
             {isError ? '× ' : '✓ '}{message}
           </p>
         {/if}

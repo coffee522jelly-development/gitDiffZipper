@@ -202,15 +202,18 @@ fn create_zip(
         if full_path.is_file() {
             included_files.push(file_path_str.clone());
             let mut f = File::open(&full_path)
-                .map_err(|e| format!("Failed to open file {}: {}", file_path_str, e))?;
+                .map_err(|e| format!("ファイルを開けませんでした ({}): {}", file_path_str, e))?;
             let mut buffer = Vec::new();
             f.read_to_end(&mut buffer)
-                .map_err(|e| format!("Failed to read file {}: {}", file_path_str, e))?;
+                .map_err(|e| format!("ファイルを読み込めませんでした ({}): {}", file_path_str, e))?;
 
-            zip.start_file(file_path_str, options)
-                .map_err(|e| format!("Failed to add file to ZIP {}: {}", file_path_str, e))?;
+            // Replace Windows path separators with forward slashes for ZIP compatibility
+            let zip_internal_path = file_path_str.replace('\\', "/");
+
+            zip.start_file(&zip_internal_path, options)
+                .map_err(|e| format!("ZIP内ファイル作成失敗 ({}): {}", zip_internal_path, e))?;
             zip.write_all(&buffer)
-                .map_err(|e| format!("Failed to write file to ZIP {}: {}", file_path_str, e))?;
+                .map_err(|e| format!("ZIP内データ書込失敗 ({}): {}", zip_internal_path, e))?;
         }
     }
 
