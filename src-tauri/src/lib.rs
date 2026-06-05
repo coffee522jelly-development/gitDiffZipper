@@ -246,6 +246,32 @@ fn create_zip(
     Ok(())
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn test_create_zip_latest() {
+        let git_path = "git".to_string(); // Assumes git is in PATH in this environment
+        let repo_path = "..".to_string(); // Current project root
+        let offset = 0;
+        let output_path = "test_latest.zip".to_string();
+        let exclude_patterns = vec![".pdf".to_string()];
+
+        // Clean up before test
+        let _ = fs::remove_file(&output_path);
+
+        let result = create_zip(git_path, repo_path, offset, output_path.clone(), exclude_patterns);
+
+        assert!(result.is_ok(), "ZIP creation failed: {:?}", result.err());
+        assert!(Path::new(&output_path).exists(), "Output ZIP file not found");
+
+        // Clean up after test
+        let _ = fs::remove_file(&output_path);
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
