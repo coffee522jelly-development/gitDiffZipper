@@ -1,6 +1,6 @@
 use std::process::Command;
-use std::fs::File;
-use std::io::{Write, Read};
+use std::fs::{self, File};
+use std::io::{Write, Read, ErrorKind};
 use std::path::Path;
 use serde::{Serialize, Deserialize};
 use zip::write::SimpleFileOptions;
@@ -202,7 +202,10 @@ fn create_zip(
         if full_path.is_file() {
             included_files.push(file_path_str.clone());
             let mut f = File::open(&full_path)
-                .map_err(|e| format!("ファイルを開けませんでした ({}): {}", file_path_str, e))?;
+                .map_err(|e| match e.kind() {
+                    ErrorKind::PermissionDenied => format!("アクセスが拒否されました。ファイルが他で開かれている可能性があります ({}): {}", file_path_str, e),
+                    _ => format!("ファイルを開けませんでした ({}): {}", file_path_str, e),
+                })?;
             let mut buffer = Vec::new();
             f.read_to_end(&mut buffer)
                 .map_err(|e| format!("ファイルを読み込めませんでした ({}): {}", file_path_str, e))?;
@@ -242,6 +245,20 @@ fn create_zip(
         .map_err(|e| format!("Failed to write readme.txt to ZIP: {}", e))?;
 
     zip.finish().map_err(|e| format!("Failed to finish ZIP: {}", e))?;
+
+    // 5. Generate manifest.txt outside ZIP
+    if let Some(parent) = path.parent() {
+        let manifest_path = parent.join("manifest.txt");
+        let mut manifest_content = String::new();
+        manifest_content.push_str(&format!("Commit ID: {}\n", commit_info.hash));
+        manifest_content.push_str("Included Files:\n");
+        for f in &included_files {
+            manifest_content.push_str(&format!("- {}\n", f));
+        }
+
+        fs::write(manifest_path, manifest_content)
+            .map_err(|e| format!("manifest.txtの書き込みに失敗しました: {}", e))?;
+    }
 
     Ok(())
 }
