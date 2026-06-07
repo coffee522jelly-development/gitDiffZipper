@@ -67,13 +67,20 @@ fn _validate_git(git_path: &str) -> Result<GitVersion, String> {
     }
 }
 
-fn _get_commit_info(git_path: &str, repo_path: &str, offset: u32) -> Result<CommitInfo, String> {
+fn _get_commit_info(git_path: &str, repo_path: &str, from_offset: u32, to_offset: u32) -> Result<CommitInfo, String> {
     let git_path = clean_path(git_path);
     let repo_path = clean_path(repo_path);
-    let rev = format!("HEAD~{}", offset);
+
+    let (old, new) = if from_offset > to_offset {
+        (from_offset, to_offset)
+    } else {
+        (to_offset, from_offset)
+    };
+
+    let rev_new = format!("HEAD~{}", new);
     let output = Command::new(&git_path)
         .current_dir(&repo_path)
-        .args(["log", "--format=%H%n%s", "-1", &rev])
+        .args(["log", "--format=%H%n%s", "-1", &rev_new])
         .output()
         .map_err(|e| format!("git log 実行エラー: {}", e))?;
 
@@ -90,18 +97,39 @@ fn _get_commit_info(git_path: &str, repo_path: &str, offset: u32) -> Result<Comm
     let hash = lines.next().unwrap_or("").to_string();
     let message = lines.next().unwrap_or("").to_string();
 
-    Ok(CommitInfo { hash, message })
+    let display_hash = if old == new {
+        hash
+    } else {
+        format!("HEAD~{} .. {}", old, hash)
+    };
+
+    let display_message = if old == new {
+        message
+    } else {
+        format!("[範囲] {}", message)
+    };
+
+    Ok(CommitInfo { hash: display_hash, message: display_message })
 }
 
-fn _get_changed_files(git_path: &str, repo_path: &str, offset: u32) -> Result<ChangedFiles, String> {
+fn _get_changed_files(git_path: &str, repo_path: &str, from_offset: u32, to_offset: u32) -> Result<ChangedFiles, String> {
     let git_path = clean_path(git_path);
     let repo_path = clean_path(repo_path);
-    let rev = format!("HEAD~{}", offset);
+
+    let (old, new) = if from_offset > to_offset {
+        (from_offset, to_offset)
+    } else {
+        (to_offset, from_offset)
+    };
+
+    let rev_old = format!("HEAD~{}", old + 1);
+    let rev_new = format!("HEAD~{}", new);
+
     let output = Command::new(&git_path)
         .current_dir(&repo_path)
-        .args(["show", "--name-only", "--pretty=", &rev])
+        .args(["diff", "--name-only", &rev_old, &rev_new])
         .output()
-        .map_err(|e| format!("git show 実行エラー: {}", e))?;
+        .map_err(|e| format!("git diff 実行エラー: {}", e))?;
 
     if !output.status.success() {
         return Err(format!("Gitエラー: {}", String::from_utf8_lossy(&output.stderr)));
@@ -145,20 +173,21 @@ fn validate_git(git_path: String) -> Result<GitVersion, String> {
 }
 
 #[tauri::command]
-fn get_commit_info(git_path: String, repo_path: String, offset: u32) -> Result<CommitInfo, String> {
-    _get_commit_info(&git_path, &repo_path, offset)
+fn get_commit_info(git_path: String, repo_path: String, from_offset: u32, to_offset: u32) -> Result<CommitInfo, String> {
+    _get_commit_info(&git_path, &repo_path, from_offset, to_offset)
 }
 
 #[tauri::command]
-fn get_changed_files(git_path: String, repo_path: String, offset: u32) -> Result<ChangedFiles, String> {
-    _get_changed_files(&git_path, &repo_path, offset)
+fn get_changed_files(git_path: String, repo_path: String, from_offset: u32, to_offset: u32) -> Result<ChangedFiles, String> {
+    _get_changed_files(&git_path, &repo_path, from_offset, to_offset)
 }
 
 #[tauri::command]
 fn create_zip(
     git_path: String,
     repo_path: String,
-    offset: u32,
+    from_offset: u32,
+    to_offset: u32,
     output_path: String,
     exclude_patterns: Vec<String>,
 ) -> Result<(), String> {
@@ -166,8 +195,8 @@ fn create_zip(
     let repo_path = clean_path(&repo_path);
     let output_path = clean_path(&output_path);
 
-    let commit_info = _get_commit_info(&git_path, &repo_path, offset)?;
-    let changed_files = _get_changed_files(&git_path, &repo_path, offset)?;
+    let commit_info = _get_commit_info(&git_path, &repo_path, from_offset, to_offset)?;
+    let changed_files = _get_changed_files(&git_path, &repo_path, from_offset, to_offset)?;
 
     let path = Path::new(&output_path);
 
@@ -279,7 +308,7 @@ mod tests {
         // Clean up before test
         let _ = fs::remove_file(&output_path);
 
-        let result = create_zip(git_path, repo_path, offset, output_path.clone(), exclude_patterns);
+        let result = create_zip(git_path, repo_path, offset, offset, output_path.clone(), exclude_patterns);
 
         assert!(result.is_ok(), "ZIP creation failed: {:?}", result.err());
         assert!(Path::new(&output_path).exists(), "Output ZIP file not found");

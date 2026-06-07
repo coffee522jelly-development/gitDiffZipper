@@ -6,7 +6,8 @@
 
   let gitPath = $state('C:\\Program Files\\Git\\cmd\\git.exe');
   let repoPath = $state('');
-  let offset = $state(0);
+  let fromOffset = $state(0);
+  let toOffset = $state(0);
   let excludeFilter = $state('.pdf, .zip, .docx');
   let outputPath = $state('');
 
@@ -29,6 +30,10 @@
     if (savedExcludeFilter !== null) {
       excludeFilter = savedExcludeFilter;
     }
+    const savedFrom = await store.get<number>('fromOffset');
+    if (savedFrom !== null) fromOffset = savedFrom;
+    const savedTo = await store.get<number>('toOffset');
+    if (savedTo !== null) toOffset = savedTo;
   });
 
   async function validateGit() {
@@ -118,8 +123,8 @@
     if (!repoPath || !gitPath) return;
     isLoading = true;
     try {
-      commitInfo = await invoke('get_commit_info', { gitPath, repoPath, offset });
-      const filesResult = await invoke<{files: string[]}>('get_changed_files', { gitPath, repoPath, offset });
+      commitInfo = await invoke('get_commit_info', { gitPath, repoPath, from_offset: fromOffset, to_offset: toOffset });
+      const filesResult = await invoke<{files: string[]}>('get_changed_files', { gitPath, repoPath, from_offset: fromOffset, to_offset: toOffset });
       changedFiles = filesResult.files;
       isError = false;
       message = '';
@@ -145,11 +150,14 @@
       await invoke('create_zip', {
         gitPath,
         repoPath,
-        offset,
+        from_offset: fromOffset,
+        to_offset: toOffset,
         outputPath,
         excludePatterns
       });
       await store.set('excludeFilter', excludeFilter);
+      await store.set('fromOffset', fromOffset);
+      await store.set('toOffset', toOffset);
       await store.save();
       isError = false;
       message = '作成成功';
@@ -162,7 +170,7 @@
   }
 
   $effect(() => {
-    if (offset >= 0) {
+    if (fromOffset >= 0 && toOffset >= 0) {
       updateCommitInfo();
     }
   });
@@ -204,11 +212,15 @@
       </div>
     </div>
 
-    <!-- Row: Offset & Exclude -->
+    <!-- Row: Range & Exclude -->
     <div class="grid grid-cols-2 gap-3">
       <div class="space-y-1">
-        <label class="font-semibold text-slate-500" for="offset">対象コミット (HEAD~N)</label>
-        <input id="offset" type="number" min="0" bind:value={offset} class="w-full bg-white border rounded px-2 py-1 outline-none focus:border-slate-400 transition-colors" />
+        <label class="font-semibold text-slate-500">対象範囲 (HEAD~N)</label>
+        <div class="flex items-center gap-1">
+          <input type="number" min="0" bind:value={fromOffset} title="古い方" class="w-full bg-white border rounded px-2 py-1 outline-none focus:border-slate-400 transition-colors" />
+          <span>～</span>
+          <input type="number" min="0" bind:value={toOffset} title="新しい方" class="w-full bg-white border rounded px-2 py-1 outline-none focus:border-slate-400 transition-colors" />
+        </div>
       </div>
       <div class="space-y-1">
         <label class="font-semibold text-slate-500" for="exclude-filter">除外フィルタ (カンマ区切り)</label>
