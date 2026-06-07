@@ -14,6 +14,7 @@
   let gitVersion = $state('');
   let commitInfo = $state<{hash: string, message: string} | null>(null);
   let changedFiles = $state<string[]>([]);
+  let commitHistory = $state<{index: number, hash: string, message: string, date: string}[]>([]);
   let isLoading = $state(false);
   let message = $state('');
   let isError = $state(false);
@@ -71,6 +72,7 @@
         repoPath = path;
         message = '';
         updateCommitInfo();
+        updateCommitHistory();
       } else {
         isError = true;
         message = 'Gitリポジトリではありません';
@@ -101,6 +103,7 @@
       isError = false;
       message = '更新完了';
       updateCommitInfo();
+      updateCommitHistory();
     } catch (e) {
       isError = true;
       message = '失敗: ' + e;
@@ -116,6 +119,15 @@
     });
     if (selected) {
       outputPath = selected;
+    }
+  }
+
+  async function updateCommitHistory() {
+    if (!repoPath || !gitPath) return;
+    try {
+      commitHistory = await invoke('get_commit_history', { gitPath, repoPath, count: 20 });
+    } catch (e) {
+      commitHistory = [];
     }
   }
 
@@ -257,7 +269,7 @@
     <!-- Files Preview -->
     <div class="space-y-1 flex flex-col flex-1 min-h-0">
       <label class="font-semibold text-slate-500">変更ファイル ({changedFiles.length})</label>
-      <div class="bg-white border rounded p-2 flex-1 overflow-y-auto font-mono text-[10px] leading-tight min-h-[80px]">
+      <div class="bg-white border rounded p-2 flex-1 overflow-y-auto font-mono text-[10px] leading-tight min-h-[60px]">
         {#if changedFiles.length > 0}
           <ul class="divide-y divide-slate-50">
             {#each changedFiles as file}
@@ -267,6 +279,43 @@
         {:else}
           <p class="text-slate-300 italic">変更なし</p>
         {/if}
+      </div>
+    </div>
+
+    <!-- Commit History -->
+    <div class="space-y-1 flex flex-col min-h-0">
+      <label class="font-semibold text-slate-500">コミット履歴 (直近20件)</label>
+      <div class="bg-white border rounded overflow-hidden flex-1 flex flex-col min-h-[120px]">
+        <div class="overflow-y-auto flex-1">
+          <table class="w-full text-[10px] text-left border-collapse">
+            <thead class="bg-slate-50 sticky top-0 shadow-sm">
+              <tr>
+                <th class="px-2 py-1 border-b">ID</th>
+                <th class="px-2 py-1 border-b">Hash</th>
+                <th class="px-2 py-1 border-b">Message</th>
+                <th class="px-2 py-1 border-b text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-50">
+              {#each commitHistory as item}
+                <tr class="hover:bg-slate-50">
+                  <td class="px-2 py-1 font-mono text-slate-400">HEAD~{item.index}</td>
+                  <td class="px-2 py-1 font-mono text-slate-400">{item.hash.slice(0,7)}</td>
+                  <td class="px-2 py-1 truncate max-w-[150px]" title={item.message}>{item.message}</td>
+                  <td class="px-2 py-1 text-right space-x-1 whitespace-nowrap">
+                    <button onclick={() => fromOffset = item.index} class="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 rounded border">始</button>
+                    <button onclick={() => toOffset = item.index} class="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 rounded border">終</button>
+                  </td>
+                </tr>
+              {/each}
+              {#if commitHistory.length === 0}
+                <tr>
+                  <td colspan="4" class="px-2 py-4 text-center text-slate-300 italic">履歴なし</td>
+                </tr>
+              {/if}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </main>

@@ -18,6 +18,14 @@ pub struct CommitInfo {
     message: String,
 }
 
+#[derive(Serialize, Deserialize, Clone)]
+pub struct CommitHistoryItem {
+    index: u32,
+    hash: String,
+    message: String,
+    date: String,
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct ChangedFiles {
     files: Vec<String>,
@@ -112,6 +120,34 @@ fn _get_commit_info(git_path: &str, repo_path: &str, from_offset: u32, to_offset
     Ok(CommitInfo { hash: display_hash, message: display_message })
 }
 
+fn _get_commit_history(git_path: &str, repo_path: &str, count: u32) -> Result<Vec<CommitHistoryItem>, String> {
+    let git_path = clean_path(git_path);
+    let repo_path = clean_path(repo_path);
+
+    let output = Command::new(&git_path)
+        .current_dir(&repo_path)
+        .args(["log", "--format=%H|%s|%ai", "-n", &count.to_string()])
+        .output()
+        .map_err(|e| format!("git log 実行エラー: {}", e))?;
+
+    if !output.status.success() {
+        return Err(format!("Gitエラー: {}", String::from_utf8_lossy(&output.stderr)));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let items = stdout.lines().enumerate().map(|(i, line)| {
+        let parts: Vec<&str> = line.split('|').collect();
+        CommitHistoryItem {
+            index: i as u32,
+            hash: parts.get(0).unwrap_or(&"").to_string(),
+            message: parts.get(1).unwrap_or(&"").to_string(),
+            date: parts.get(2).unwrap_or(&"").to_string(),
+        }
+    }).collect();
+
+    Ok(items)
+}
+
 fn _get_changed_files(git_path: &str, repo_path: &str, from_offset: u32, to_offset: u32) -> Result<ChangedFiles, String> {
     let git_path = clean_path(git_path);
     let repo_path = clean_path(repo_path);
@@ -148,6 +184,11 @@ fn _get_changed_files(git_path: &str, repo_path: &str, from_offset: u32, to_offs
 #[tauri::command]
 fn validate_repo(git_path: String, repo_path: String) -> Result<bool, String> {
     _validate_repo(&git_path, &repo_path)
+}
+
+#[tauri::command]
+fn get_commit_history(git_path: String, repo_path: String, count: u32) -> Result<Vec<CommitHistoryItem>, String> {
+    _get_commit_history(&git_path, &repo_path, count)
 }
 
 #[tauri::command]
@@ -331,6 +372,7 @@ pub fn run() {
         validate_repo,
         get_commit_info,
         get_changed_files,
+        get_commit_history,
         fetch_remote,
         create_zip
     ])
