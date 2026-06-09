@@ -259,18 +259,18 @@ fn _get_changed_files(git_path: &str, repo_path: &str, from_offset: u32, to_offs
 }
 
 // Tauri commands
-#[tauri::command]
-fn validate_repo(git_path: String, repo_path: String) -> Result<bool, String> {
+#[tauri::command(rename_all = "camelCase")]
+pub fn validate_repo(git_path: String, repo_path: String) -> Result<bool, String> {
     _validate_repo(&git_path, &repo_path)
 }
 
-#[tauri::command]
-fn get_commit_history(git_path: String, repo_path: String, count: u32) -> Result<Vec<CommitHistoryItem>, String> {
+#[tauri::command(rename_all = "camelCase")]
+pub fn get_commit_history(git_path: String, repo_path: String, count: u32) -> Result<Vec<CommitHistoryItem>, String> {
     _get_commit_history(&git_path, &repo_path, count)
 }
 
-#[tauri::command]
-fn fetch_remote(git_path: String, repo_path: String) -> Result<(), String> {
+#[tauri::command(rename_all = "camelCase")]
+pub fn fetch_remote(git_path: String, repo_path: String) -> Result<(), String> {
     let git_path = clean_path(&git_path);
     let repo_path = clean_path(&repo_path);
     let output = Command::new(&git_path)
@@ -286,38 +286,30 @@ fn fetch_remote(git_path: String, repo_path: String) -> Result<(), String> {
     Ok(())
 }
 
-#[tauri::command]
-fn validate_git(git_path: String) -> Result<GitVersion, String> {
+#[tauri::command(rename_all = "camelCase")]
+pub fn validate_git(git_path: String) -> Result<GitVersion, String> {
     _validate_git(&git_path)
 }
 
-#[tauri::command]
-fn get_commit_info(git_path: String, repo_path: String, from_offset: Option<u32>, to_offset: Option<u32>, fromOffset: Option<u32>, toOffset: Option<u32>) -> Result<CommitInfo, String> {
-    let from = fromOffset.or(from_offset).unwrap_or(0);
-    let to = toOffset.or(to_offset).unwrap_or(0);
-    _get_commit_info(&git_path, &repo_path, from, to)
+#[tauri::command(rename_all = "camelCase")]
+pub fn get_commit_info(git_path: String, repo_path: String, from_offset: u32, to_offset: u32) -> Result<CommitInfo, String> {
+    _get_commit_info(&git_path, &repo_path, from_offset, to_offset)
 }
 
-#[tauri::command]
-fn get_changed_files(git_path: String, repo_path: String, from_offset: Option<u32>, to_offset: Option<u32>, fromOffset: Option<u32>, toOffset: Option<u32>) -> Result<ChangedFiles, String> {
-    let from = fromOffset.or(from_offset).unwrap_or(0);
-    let to = toOffset.or(to_offset).unwrap_or(0);
-    _get_changed_files(&git_path, &repo_path, from, to)
+#[tauri::command(rename_all = "camelCase")]
+pub fn get_changed_files(git_path: String, repo_path: String, from_offset: u32, to_offset: u32) -> Result<ChangedFiles, String> {
+    _get_changed_files(&git_path, &repo_path, from_offset, to_offset)
 }
 
-#[tauri::command]
-fn create_zip(
+#[tauri::command(rename_all = "camelCase")]
+pub fn create_zip(
     git_path: String,
     repo_path: String,
-    from_offset: Option<u32>,
-    to_offset: Option<u32>,
-    fromOffset: Option<u32>,
-    toOffset: Option<u32>,
+    from_offset: u32,
+    to_offset: u32,
     output_path: String,
     exclude_patterns: Vec<String>,
 ) -> Result<(), String> {
-    let from = fromOffset.or(from_offset).unwrap_or(0);
-    let to = toOffset.or(to_offset).unwrap_or(0);
     let git_path = clean_path(&git_path);
     let repo_path = clean_path(&repo_path);
     let output_path = clean_path(&output_path);
@@ -329,8 +321,8 @@ fn create_zip(
     // Get absolute repo root to correctly resolve relative paths from git
     let root_path = _get_repo_root(&git_path, &repo_path)?;
 
-    let commit_info = _get_commit_info(&git_path, &repo_path, from, to)?;
-    let changed_files = _get_changed_files(&git_path, &repo_path, from, to)?;
+    let commit_info = _get_commit_info(&git_path, &repo_path, from_offset, to_offset)?;
+    let changed_files = _get_changed_files(&git_path, &repo_path, from_offset, to_offset)?;
 
     let path = Path::new(&output_path);
 

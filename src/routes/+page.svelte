@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
   import { open, save } from '@tauri-apps/plugin-dialog';
-  import { LazyStore } from '@tauri-apps/plugin-store';
+  import { Store } from '@tauri-apps/plugin-store';
 
   let gitPath = $state('C:\\Program Files\\Git\\cmd\\git.exe');
   let repoPath = $state('');
@@ -19,9 +19,11 @@
   let message = $state('');
   let isError = $state(false);
 
-  const store = new LazyStore('.settings.dat');
+  let store: Store | null = null;
 
   onMount(async () => {
+    store = await Store.load('.settings.dat');
+
     const savedGitPath = await store.get<string>('gitPath');
     if (savedGitPath) {
       gitPath = savedGitPath;
@@ -42,8 +44,10 @@
       const result = await invoke<{valid: boolean, version: string}>('validate_git', { gitPath });
       if (result.valid) {
         gitVersion = result.version;
-        await store.set('gitPath', gitPath);
-        await store.save();
+        if (store) {
+          await store.set('gitPath', gitPath);
+          await store.save();
+        }
       } else {
         gitVersion = 'Gitではありません';
       }
@@ -167,10 +171,12 @@
         outputPath,
         excludePatterns
       });
-      await store.set('excludeFilter', excludeFilter);
-      await store.set('fromOffset', fromOffset);
-      await store.set('toOffset', toOffset);
-      await store.save();
+      if (store) {
+        await store.set('excludeFilter', excludeFilter);
+        await store.set('fromOffset', fromOffset);
+        await store.set('toOffset', toOffset);
+        await store.save();
+      }
       isError = false;
       message = '作成成功';
     } catch (e) {
