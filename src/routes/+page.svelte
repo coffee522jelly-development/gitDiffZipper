@@ -135,8 +135,8 @@
     if (!repoPath || !gitPath) return;
     isLoading = true;
     try {
-      commitInfo = await invoke('get_commit_info', { gitPath, repoPath, from_offset: fromOffset, to_offset: toOffset });
-      const filesResult = await invoke<{files: string[]}>('get_changed_files', { gitPath, repoPath, from_offset: fromOffset, to_offset: toOffset });
+      commitInfo = await invoke('get_commit_info', { gitPath, repoPath, fromOffset, toOffset });
+      const filesResult = await invoke<{files: string[]}>('get_changed_files', { gitPath, repoPath, fromOffset, toOffset });
       changedFiles = filesResult.files;
       isError = false;
       message = '';
@@ -162,8 +162,8 @@
       await invoke('create_zip', {
         gitPath,
         repoPath,
-        from_offset: fromOffset,
-        to_offset: toOffset,
+        fromOffset,
+        toOffset,
         outputPath,
         excludePatterns
       });
