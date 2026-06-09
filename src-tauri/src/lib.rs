@@ -36,7 +36,7 @@ fn clean_path(path: &str) -> String {
     path.trim().trim_matches('"').trim_matches('\'').trim().to_string()
 }
 
-fn _get_repo_root(git_path: &str, repo_path: &str) -> Result<PathBuf, String> {
+fn logic_get_repo_root(git_path: &str, repo_path: &str) -> Result<PathBuf, String> {
     let output = Command::new(git_path)
         .current_dir(repo_path)
         .args(["rev-parse", "--show-toplevel"])
@@ -52,7 +52,7 @@ fn _get_repo_root(git_path: &str, repo_path: &str) -> Result<PathBuf, String> {
 }
 
 // Internal logic functions
-fn _validate_repo(git_path: &str, repo_path: &str) -> Result<bool, String> {
+fn logic_validate_repo(git_path: &str, repo_path: &str) -> Result<bool, String> {
     let git_path = clean_path(git_path);
     let repo_path = clean_path(repo_path);
 
@@ -73,7 +73,7 @@ fn _validate_repo(git_path: &str, repo_path: &str) -> Result<bool, String> {
     Ok(output.status.success())
 }
 
-fn _validate_git(git_path: &str) -> Result<GitVersion, String> {
+fn logic_validate_git(git_path: &str) -> Result<GitVersion, String> {
     let git_path = clean_path(git_path);
     if git_path.is_empty() {
         return Ok(GitVersion { valid: false, version: "".to_string() });
@@ -97,7 +97,7 @@ fn _validate_git(git_path: &str) -> Result<GitVersion, String> {
     }
 }
 
-fn _get_commit_info(git_path: &str, repo_path: &str, from_offset: u32, to_offset: u32) -> Result<CommitInfo, String> {
+fn logic_get_commit_info(git_path: &str, repo_path: &str, from_offset: u32, to_offset: u32) -> Result<CommitInfo, String> {
     let git_path = clean_path(git_path);
     let repo_path = clean_path(repo_path);
 
@@ -142,7 +142,7 @@ fn _get_commit_info(git_path: &str, repo_path: &str, from_offset: u32, to_offset
     Ok(CommitInfo { hash: display_hash, message: display_message })
 }
 
-fn _get_commit_history(git_path: &str, repo_path: &str, count: u32) -> Result<Vec<CommitHistoryItem>, String> {
+fn logic_get_commit_history(git_path: &str, repo_path: &str, count: u32) -> Result<Vec<CommitHistoryItem>, String> {
     let git_path = clean_path(git_path);
     let repo_path = clean_path(repo_path);
 
@@ -187,7 +187,7 @@ fn _get_commit_history(git_path: &str, repo_path: &str, count: u32) -> Result<Ve
     Ok(items)
 }
 
-fn _get_changed_files(git_path: &str, repo_path: &str, from_offset: u32, to_offset: u32) -> Result<ChangedFiles, String> {
+fn logic_get_changed_files(git_path: &str, repo_path: &str, from_offset: u32, to_offset: u32) -> Result<ChangedFiles, String> {
     let git_path = clean_path(git_path);
     let repo_path = clean_path(repo_path);
 
@@ -260,17 +260,17 @@ fn _get_changed_files(git_path: &str, repo_path: &str, from_offset: u32, to_offs
 
 // Tauri commands
 #[tauri::command(rename_all = "camelCase")]
-pub fn validate_repo(git_path: String, repo_path: String) -> Result<bool, String> {
-    _validate_repo(&git_path, &repo_path)
+fn validate_repo(git_path: String, repo_path: String) -> Result<bool, String> {
+    logic_validate_repo(&git_path, &repo_path)
 }
 
 #[tauri::command(rename_all = "camelCase")]
-pub fn get_commit_history(git_path: String, repo_path: String, count: u32) -> Result<Vec<CommitHistoryItem>, String> {
-    _get_commit_history(&git_path, &repo_path, count)
+fn get_commit_history(git_path: String, repo_path: String, count: u32) -> Result<Vec<CommitHistoryItem>, String> {
+    logic_get_commit_history(&git_path, &repo_path, count)
 }
 
 #[tauri::command(rename_all = "camelCase")]
-pub fn fetch_remote(git_path: String, repo_path: String) -> Result<(), String> {
+fn fetch_remote(git_path: String, repo_path: String) -> Result<(), String> {
     let git_path = clean_path(&git_path);
     let repo_path = clean_path(&repo_path);
     let output = Command::new(&git_path)
@@ -287,22 +287,22 @@ pub fn fetch_remote(git_path: String, repo_path: String) -> Result<(), String> {
 }
 
 #[tauri::command(rename_all = "camelCase")]
-pub fn validate_git(git_path: String) -> Result<GitVersion, String> {
-    _validate_git(&git_path)
+fn validate_git(git_path: String) -> Result<GitVersion, String> {
+    logic_validate_git(&git_path)
 }
 
 #[tauri::command(rename_all = "camelCase")]
-pub fn get_commit_info(git_path: String, repo_path: String, from_offset: u32, to_offset: u32) -> Result<CommitInfo, String> {
-    _get_commit_info(&git_path, &repo_path, from_offset, to_offset)
+fn get_commit_info(git_path: String, repo_path: String, from_offset: u32, to_offset: u32) -> Result<CommitInfo, String> {
+    logic_get_commit_info(&git_path, &repo_path, from_offset, to_offset)
 }
 
 #[tauri::command(rename_all = "camelCase")]
-pub fn get_changed_files(git_path: String, repo_path: String, from_offset: u32, to_offset: u32) -> Result<ChangedFiles, String> {
-    _get_changed_files(&git_path, &repo_path, from_offset, to_offset)
+fn get_changed_files(git_path: String, repo_path: String, from_offset: u32, to_offset: u32) -> Result<ChangedFiles, String> {
+    logic_get_changed_files(&git_path, &repo_path, from_offset, to_offset)
 }
 
 #[tauri::command(rename_all = "camelCase")]
-pub fn create_zip(
+fn create_zip(
     git_path: String,
     repo_path: String,
     from_offset: u32,
@@ -319,10 +319,10 @@ pub fn create_zip(
     if output_path.is_empty() { return Err("出力先が指定されていません".to_string()); }
 
     // Get absolute repo root to correctly resolve relative paths from git
-    let root_path = _get_repo_root(&git_path, &repo_path)?;
+    let root_path = logic_get_repo_root(&git_path, &repo_path)?;
 
-    let commit_info = _get_commit_info(&git_path, &repo_path, from_offset, to_offset)?;
-    let changed_files = _get_changed_files(&git_path, &repo_path, from_offset, to_offset)?;
+    let commit_info = logic_get_commit_info(&git_path, &repo_path, from_offset, to_offset)?;
+    let changed_files = logic_get_changed_files(&git_path, &repo_path, from_offset, to_offset)?;
 
     let path = Path::new(&output_path);
 
