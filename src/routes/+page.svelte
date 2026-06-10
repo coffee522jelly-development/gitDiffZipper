@@ -27,7 +27,6 @@
     const savedGitPath = await store.get<string>('gitPath');
     if (savedGitPath) {
       gitPath = savedGitPath;
-      validateGit();
     }
     const savedExcludeFilter = await store.get<string>('excludeFilter');
     if (savedExcludeFilter !== null) {
@@ -48,11 +47,14 @@
           await store.set('gitPath', gitPath);
           await store.save();
         }
+        return true;
       } else {
         gitVersion = 'Gitではありません';
+        return false;
       }
     } catch (e) {
       gitVersion = '検証失敗';
+      return false;
     }
   }
 
@@ -64,13 +66,27 @@
     });
     if (selected && typeof selected === 'string') {
       gitPath = selected;
-      validateGit();
+      // Do not validate immediately as per user request
     }
   }
 
   async function validateRepo(path: string) {
     if (!path || !gitPath) return;
+
+    isLoading = true;
+    message = 'リポジトリを確認中...';
+    isError = false;
+
     try {
+      // Perform Git connectivity check only when repository is specified
+      const isGitValid = await validateGit();
+      if (!isGitValid) {
+        isError = true;
+        message = 'Git実行ファイルが正しく設定されていません';
+        isLoading = false;
+        return;
+      }
+
       const isValid = await invoke<boolean>('validate_repo', { gitPath, repoPath: path });
       if (isValid) {
         repoPath = path;
@@ -84,6 +100,8 @@
     } catch (e) {
       isError = true;
       message = '検証失敗: ' + e;
+    } finally {
+      isLoading = false;
     }
   }
 
@@ -188,7 +206,8 @@
   }
 
   $effect(() => {
-    if (fromOffset >= 0 && toOffset >= 0) {
+    // Only update if repoPath is set
+    if (repoPath && fromOffset >= 0 && toOffset >= 0) {
       updateCommitInfo();
     }
   });
