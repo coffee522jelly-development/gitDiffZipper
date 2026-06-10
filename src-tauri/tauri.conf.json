@@ -13,7 +13,7 @@
     "windows": [
       {
         "title": "Git差分ZIP作成ツール",
-        "width": 500,
+        "width": 900,
         "height": 650,
         "resizable": true,
         "fullscreen": false
