@@ -18,6 +18,7 @@
   let isLoading = $state(false);
   let message = $state('');
   let isError = $state(false);
+  let historyError = $state('');
 
   let store: Store | null = null;
 
@@ -148,8 +149,10 @@
     if (!repoPath || !gitPath) return;
     try {
       commitHistory = await invoke('get_commit_history', { gitPath, repoPath, count: 20 });
+      historyError = '';
     } catch (e) {
       commitHistory = [];
+      historyError = '履歴の取得に失敗しました';
     }
   }
 
@@ -259,7 +262,13 @@
                   {/each}
                   {#if commitHistory.length === 0}
                     <tr>
-                      <td colspan="4" class="px-3 py-8 text-center text-slate-300 italic">リポジトリを選択してください</td>
+                      <td colspan="4" class="px-3 py-8 text-center italic">
+                        {#if historyError}
+                          <span class="text-red-400 font-bold">{historyError}</span>
+                        {:else}
+                          <span class="text-slate-300">リポジトリを選択してください</span>
+                        {/if}
+                      </td>
                     </tr>
                   {/if}
                 </tbody>
