@@ -6,18 +6,23 @@ use serde::{Serialize, Deserialize};
 use zip::write::SimpleFileOptions;
 use chrono::Local;
 
+// --- データ構造定義 ---
+
+/// Gitのバージョン検証結果をフロントエンドに返すための構造体
 #[derive(Serialize, Deserialize)]
 pub struct GitVersion {
     valid: bool,
     version: String,
 }
 
+/// 単一または範囲指定されたコミットの要約情報を保持する構造体
 #[derive(Serialize, Deserialize)]
 pub struct CommitInfo {
     hash: String,
     message: String,
 }
 
+/// 履歴一覧に表示するための1コミット分のデータ
 #[derive(Serialize, Deserialize, Clone)]
 pub struct CommitHistoryItem {
     index: u32,
@@ -26,16 +31,22 @@ pub struct CommitHistoryItem {
     date: String,
 }
 
+/// 差分として抽出されたファイルパスのリストを保持する構造体
 #[derive(Serialize, Deserialize)]
 pub struct ChangedFiles {
     files: Vec<String>,
 }
 
-// Helper to clean paths (remove quotes and extra whitespace)
+// --- 内部ロジック関数 (prefix: logic_) ---
+
+/// パス文字列から引用符や余計な空白を削除する補助関数
+/// Windowsの「パスとしてコピー」で付与される引用符を処理するために使用
 fn clean_path(path: &str) -> String {
     path.trim().trim_matches('"').trim_matches('\'').trim().to_string()
 }
 
+/// 指定されたリポジトリパスのルート（一番上の階層）の絶対パスを取得する
+/// サブフォルダを選択した場合でも、ZIP内の相対構造を正しく保つために必要
 fn logic_get_repo_root(git_path: &str, repo_path: &str) -> Result<PathBuf, String> {
     let output = Command::new(git_path)
         .current_dir(repo_path)
@@ -51,7 +62,7 @@ fn logic_get_repo_root(git_path: &str, repo_path: &str) -> Result<PathBuf, Strin
     }
 }
 
-// Internal logic functions
+/// フォルダが有効なGitリポジトリかどうかを検証する
 fn logic_validate_repo(git_path: &str, repo_path: &str) -> Result<bool, String> {
     let git_path = clean_path(git_path);
     let repo_path = clean_path(repo_path);
@@ -73,6 +84,7 @@ fn logic_validate_repo(git_path: &str, repo_path: &str) -> Result<bool, String> 
     Ok(output.status.success())
 }
 
+/// git.exe が正常に動作するか（疎通確認）を検証する
 fn logic_validate_git(git_path: &str) -> Result<GitVersion, String> {
     let git_path = clean_path(git_path);
     if git_path.is_empty() {
@@ -97,10 +109,12 @@ fn logic_validate_git(git_path: &str) -> Result<GitVersion, String> {
     }
 }
 
+/// 指定されたオフセット範囲のコミット情報を取得する
 fn logic_get_commit_info(git_path: &str, repo_path: &str, from_offset: u32, to_offset: u32) -> Result<CommitInfo, String> {
     let git_path = clean_path(git_path);
     let repo_path = clean_path(repo_path);
 
+    // オフセットからGitの参照文字列（HEAD~N）を生成。fromが古い方、toが新しい方になるよう調整
     let (old, new) = if from_offset > to_offset {
         (from_offset, to_offset)
     } else {
@@ -136,19 +150,20 @@ fn logic_get_commit_info(git_path: &str, repo_path: &str, from_offset: u32, to_o
     let display_message = if old == new {
         message
     } else {
-        format!("[範囲] {}", message)
+        format!("[範囲指定] {}", message)
     };
 
     Ok(CommitInfo { hash: display_hash, message: display_message })
 }
 
+/// 最新から指定件数分のコミット履歴を取得する
 fn logic_get_commit_history(git_path: &str, repo_path: &str, count: u32) -> Result<Vec<CommitHistoryItem>, String> {
     let git_path = clean_path(git_path);
     let repo_path = clean_path(repo_path);
 
     if repo_path.is_empty() { return Ok(vec![]); }
 
-    // Check if there are any commits first
+    // HEADが存在するか確認（空リポジトリ対策）
     let check_empty = Command::new(&git_path)
         .current_dir(&repo_path)
         .args(["rev-parse", "HEAD"])
@@ -162,7 +177,8 @@ fn logic_get_commit_history(git_path: &str, repo_path: &str, count: u32) -> Resu
         return Ok(vec![]);
     }
 
-    // Use unit separator (\x1f) to avoid issues with commit messages containing pipes or commas
+    // ユニットセパレータ(\x1f)を使用して、メッセージ内のカンマやパイプ文字によるパースミスを防ぐ
+    // -c core.quotepath=false により日本語ファイル名のエスケープを解除
     let output = Command::new(&git_path)
         .current_dir(&repo_path)
         .args(["-c", "core.quotepath=false", "log", "--format=%H\x1f%s\x1f%ai", "-n", &count.to_string()])
@@ -187,6 +203,7 @@ fn logic_get_commit_history(git_path: &str, repo_path: &str, count: u32) -> Resu
     Ok(items)
 }
 
+/// 指定された範囲で変更があったファイルの一覧を取得する
 fn logic_get_changed_files(git_path: &str, repo_path: &str, from_offset: u32, to_offset: u32) -> Result<ChangedFiles, String> {
     let git_path = clean_path(git_path);
     let repo_path = clean_path(repo_path);
@@ -202,7 +219,7 @@ fn logic_get_changed_files(git_path: &str, repo_path: &str, from_offset: u32, to
     let rev_new = format!("HEAD~{}", new);
     let rev_old = format!("HEAD~{}", old + 1);
 
-    // Check if HEAD exists
+    // HEAD存在確認
     let check_head = Command::new(&git_path)
         .current_dir(&repo_path)
         .args(["rev-parse", "--verify", "HEAD"])
@@ -216,7 +233,7 @@ fn logic_get_changed_files(git_path: &str, repo_path: &str, from_offset: u32, to
         return Ok(ChangedFiles { files: vec![] });
     }
 
-    // Check if rev_old exists. If not, we might be at the initial commit.
+    // 古い方の参照（HEAD~old+1）が存在するか確認。初回コミットの場合は存在しないため
     let check_old = Command::new(&git_path)
         .current_dir(&repo_path)
         .args(["rev-parse", "--verify", &rev_old])
@@ -224,7 +241,8 @@ fn logic_get_changed_files(git_path: &str, repo_path: &str, from_offset: u32, to
 
     let mut args = vec!["-c", "core.quotepath=false", "diff", "--name-only"];
 
-    let empty_tree = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"; // SHA-1 of an empty tree
+    // 親が存在しない場合、Gitの「空ツリーハッシュ」と比較することで全ファイルを抽出対象とする
+    let empty_tree = "4b825dc642cb6eb9a060e54bf8d69288fbee4904";
 
     let rev_old_resolved = if let Ok(out) = check_old {
         if out.status.success() {
@@ -258,7 +276,9 @@ fn logic_get_changed_files(git_path: &str, repo_path: &str, from_offset: u32, to
     Ok(ChangedFiles { files })
 }
 
-// Tauri commands
+// --- Tauri コマンド (フロントエンドから呼び出されるAPI) ---
+// rename_all = "camelCase" により、TypeScript側の camelCase 命名と Rust側の snake_case を自動変換
+
 #[tauri::command(rename_all = "camelCase")]
 fn validate_repo(git_path: String, repo_path: String) -> Result<bool, String> {
     logic_validate_repo(&git_path, &repo_path)
@@ -301,6 +321,7 @@ fn get_changed_files(git_path: String, repo_path: String, from_offset: u32, to_o
     logic_get_changed_files(&git_path, &repo_path, from_offset, to_offset)
 }
 
+/// ZIPファイルを生成するメインコマンド
 #[tauri::command(rename_all = "camelCase")]
 fn create_zip(
     git_path: String,
@@ -318,21 +339,23 @@ fn create_zip(
     if repo_path.is_empty() { return Err("リポジトリが指定されていません".to_string()); }
     if output_path.is_empty() { return Err("出力先が指定されていません".to_string()); }
 
-    // Get absolute repo root to correctly resolve relative paths from git
+    // リポジトリの絶対ルートパスを取得（相対パス解決の基準点とする）
     let root_path = logic_get_repo_root(&git_path, &repo_path)?;
 
+    // メタデータ生成用の情報を取得
     let commit_info = logic_get_commit_info(&git_path, &repo_path, from_offset, to_offset)?;
     let changed_files = logic_get_changed_files(&git_path, &repo_path, from_offset, to_offset)?;
 
     let path = Path::new(&output_path);
 
-    // Ensure parent directory exists
+    // 出力先ZIPの親フォルダが存在しない場合は自動作成
     if let Some(parent) = path.parent() {
         if !parent.as_os_str().is_empty() && !parent.exists() {
             std::fs::create_dir_all(parent).map_err(|e| format!("出力先フォルダの作成に失敗しました: {}", e))?;
         }
     }
 
+    // ZIPライターの初期化
     let file = File::create(path).map_err(|e| format!("ZIPファイルの作成に失敗しました ({}): {}", output_path, e))?;
     let mut zip = zip::ZipWriter::new(file);
     let options = SimpleFileOptions::default()
@@ -343,6 +366,7 @@ fn create_zip(
 
     let mut included_files = Vec::new();
     for file_path_str in &changed_files.files {
+        // 除外フィルタのチェック（大文字小文字を区別しない）
         let lower_path = file_path_str.to_lowercase();
         let should_exclude = lower_excludes.iter().any(|p| {
             let p_trim = p.trim();
@@ -353,6 +377,7 @@ fn create_zip(
             continue;
         }
 
+        // ファイルを実際に読み込んでZIPに追加
         let full_path = root_path.join(file_path_str);
         if full_path.is_file() {
             included_files.push(file_path_str.clone());
@@ -365,7 +390,7 @@ fn create_zip(
             f.read_to_end(&mut buffer)
                 .map_err(|e| format!("ファイルを読み込めませんでした ({}): {}", file_path_str, e))?;
 
-            // Replace Windows path separators with forward slashes for ZIP compatibility
+            // ZIP内のパスはOSに関わらずフォワードスラッシュ (/) に統一（互換性のため）
             let zip_internal_path = file_path_str.replace('\\', "/");
 
             zip.start_file(&zip_internal_path, options)
@@ -375,6 +400,7 @@ fn create_zip(
         }
     }
 
+    // --- メタデータ (readme.txt) の生成 ---
     let now = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
     let mut readme_content = String::new();
     readme_content.push_str("========================================\n");
@@ -401,7 +427,7 @@ fn create_zip(
 
     zip.finish().map_err(|e| format!("ZIPの終了処理に失敗しました: {}", e))?;
 
-    // 5. Generate manifest.txt outside ZIP
+    // --- 外部メタデータ (manifest.txt) の生成 ---
     if let Some(parent) = path.parent() {
         let manifest_path = if parent.as_os_str().is_empty() {
             PathBuf::from("manifest.txt")
@@ -423,6 +449,7 @@ fn create_zip(
     Ok(())
 }
 
+// --- エントリポイント ---
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
