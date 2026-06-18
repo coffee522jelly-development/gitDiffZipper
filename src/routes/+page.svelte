@@ -306,7 +306,7 @@
 
             <div class="grid grid-cols-2 gap-4 pt-2">
                 <div class="space-y-1">
-                  <label class="font-bold text-slate-500 uppercase tracking-tight text-[9px]">抽出範囲 (HEAD~N)</label>
+                  <span class="block font-bold text-slate-500 uppercase tracking-tight text-[9px]">抽出範囲 (HEAD~N)</span>
                   <div class="flex items-center gap-2">
                     <div class="flex-1 relative">
                         <span class="absolute left-2 top-1/2 -translate-y-1/2 text-[8px] text-slate-400 font-bold">FROM</span>
@@ -330,7 +330,7 @@
         <div class="grid grid-cols-1 gap-4">
             <!-- Commit Info -->
             <div class="space-y-1">
-                <label class="font-bold text-slate-400 uppercase tracking-tight text-[9px]">選択中のコミット内容</label>
+                <span class="block font-bold text-slate-400 uppercase tracking-tight text-[9px]">選択中のコミット内容</span>
                 <div class="bg-white border rounded-lg p-3 min-h-[60px] shadow-sm flex flex-col justify-center">
                     {#if commitInfo}
                         <div class="flex items-center gap-2 mb-1">
@@ -346,7 +346,7 @@
             <!-- Files -->
             <div class="flex flex-col min-h-0">
                 <div class="flex justify-between items-baseline mb-1">
-                    <label class="font-bold text-slate-400 uppercase tracking-tight text-[9px]">変更ファイル一覧 ({changedFiles.length})</label>
+                    <span class="block font-bold text-slate-400 uppercase tracking-tight text-[9px]">変更ファイル一覧 ({changedFiles.length})</span>
                 </div>
                 <div class="bg-white border rounded-lg overflow-hidden shadow-sm flex-1 flex flex-col min-h-[150px]">
                     <div class="flex-1 overflow-y-auto font-mono text-[10px] p-2 leading-relaxed">
