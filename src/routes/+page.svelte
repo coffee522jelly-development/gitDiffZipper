@@ -234,7 +234,7 @@
 
   <main class="flex-1 flex overflow-hidden">
     <!-- Left Column: Commit History -->
-    <section class="w-2/5 border-r bg-white flex flex-col min-w-0">
+    <section class="w-[27%] border-r bg-white flex flex-col min-w-0">
         <div class="px-1 py-0.5 border-b bg-slate-50/50 flex justify-between items-center">
             <h2 class="font-bold text-slate-600 uppercase tracking-wider text-[8px]">コミット履歴 (最新20件)</h2>
         </div>
