@@ -332,21 +332,7 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-4 pt-2">
-                <div class="space-y-1">
-                  <span class="block font-bold text-slate-500 uppercase tracking-tight text-[11px]">抽出範囲 (HEAD~N)</span>
-                  <div class="flex items-center gap-2">
-                    <div class="flex-1 relative">
-                        <span class="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">FROM</span>
-                        <input type="number" min="0" bind:value={fromOffset} class="w-full bg-slate-50 border rounded pl-8 pr-2 py-1.5 outline-none focus:border-blue-400 transition-colors text-blue-600 font-bold" />
-                    </div>
-                    <span class="text-slate-300">→</span>
-                    <div class="flex-1 relative">
-                        <span class="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">TO</span>
-                        <input type="number" min="0" bind:value={toOffset} class="w-full bg-slate-50 border rounded pl-8 pr-2 py-1.5 outline-none focus:border-emerald-400 transition-colors text-emerald-600 font-bold" />
-                    </div>
-                  </div>
-                </div>
+            <div class="grid grid-cols-1 gap-4 pt-2">
                 <div class="space-y-1">
                   <label class="font-bold text-slate-500 uppercase tracking-tight text-[11px]" for="exclude-filter">除外フィルタ (カンマ区切り)</label>
                   <input id="exclude-filter" type="text" bind:value={excludeFilter} placeholder=".pdf, .zip" class="w-full bg-slate-50 border rounded px-2 py-1.5 outline-none focus:border-slate-400 transition-colors truncate" />
