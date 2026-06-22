@@ -20,6 +20,8 @@
   let isError = $state(false);
   let historyError = $state('');
   let selectedCommits = $state<number[]>([]);
+  let showSettings = $state(false);
+  let repoHistory = $state<string[]>([]);
 
   let store: Store | null = null;
 
@@ -60,6 +62,8 @@
     if (savedFrom !== null) fromOffset = savedFrom;
     const savedTo = await store.get<number>('toOffset');
     if (savedTo !== null) toOffset = savedTo;
+    const savedRepoHistory = await store.get<string[]>('repoHistory');
+    if (savedRepoHistory) repoHistory = savedRepoHistory;
 
     if (fromOffset === toOffset) {
       selectedCommits = [fromOffset];
@@ -121,6 +125,10 @@
       if (isValid) {
         repoPath = path;
         message = '';
+        if (!repoHistory.includes(path)) {
+          repoHistory = [path, ...repoHistory].filter(p => p !== '').slice(0, 10);
+          if (store) { await store.set('repoHistory', repoHistory); await store.save(); }
+        }
         updateCommitInfo();
         updateCommitHistory();
       } else {
@@ -255,6 +263,9 @@
         {/if}
     </div>
     <div class="flex gap-2">
+        <button onclick={() => showSettings = true} class="bg-slate-100 hover:bg-slate-200 rounded px-2 py-0.5 border flex items-center gap-1 transition-colors">
+            ⚙ 設定
+        </button>
         <button onclick={fetchRemote} disabled={!repoPath || isLoading} class="bg-slate-100 hover:bg-slate-200 rounded px-2 py-0.5 border disabled:opacity-30 flex items-center gap-1 transition-colors">
             <span>↻</span> リモート更新
         </button>
@@ -310,13 +321,6 @@
         <div class="space-y-3 bg-white p-3 rounded-lg border shadow-sm">
             <div class="grid grid-cols-1 gap-3">
                 <div class="space-y-1">
-                  <label class="font-bold text-slate-500 uppercase tracking-tight text-[11px]" for="git-path">Git 実行ファイル (git.exe)</label>
-                  <div class="flex gap-1">
-                    <input id="git-path" type="text" bind:value={gitPath} class="w-full bg-slate-50 border rounded px-2 py-1.5 outline-none focus:border-slate-400 transition-colors truncate" />
-                    <button onclick={selectGitPath} class="bg-white hover:bg-slate-50 rounded px-3 py-1 border shadow-sm transition-colors">参照</button>
-                  </div>
-                </div>
-                <div class="space-y-1">
                   <label class="font-bold text-slate-500 uppercase tracking-tight text-[11px]" for="repo-path">Git リポジトリ フォルダ</label>
                   <div class="flex gap-1">
                     <input
@@ -325,8 +329,14 @@
                       bind:value={repoPath}
                       onchange={() => validateRepo(repoPath)}
                       placeholder="C:\Project"
+                      list="repo-history-list"
                       class="w-full bg-slate-50 border rounded px-2 py-1.5 outline-none focus:border-slate-400 transition-colors truncate"
                     />
+                    <datalist id="repo-history-list">
+                      {#each repoHistory as repo}
+                        <option value={repo}></option>
+                      {/each}
+                    </datalist>
                     <button onclick={selectRepoPath} class="bg-white hover:bg-slate-50 rounded px-3 py-1 border shadow-sm transition-colors">参照</button>
                   </div>
                 </div>
@@ -416,6 +426,26 @@
       {isLoading ? '処理中...' : 'ZIPファイルを作成'}
     </button>
   </footer>
+
+  {#if showSettings}
+  <div class="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl w-[400px] overflow-hidden flex flex-col">
+      <div class="px-4 py-3 border-b bg-slate-50 flex justify-between items-center">
+        <h2 class="font-bold text-slate-700">設定</h2>
+        <button onclick={() => showSettings = false} class="text-slate-400 hover:text-slate-600">✕</button>
+      </div>
+      <div class="p-4 space-y-4">
+        <div class="space-y-1">
+          <label class="font-bold text-slate-500 uppercase tracking-tight text-[11px]" for="git-path-modal">Git 実行ファイル (git.exe)</label>
+          <div class="flex gap-1">
+            <input id="git-path-modal" type="text" bind:value={gitPath} class="w-full bg-slate-50 border rounded px-2 py-1.5 outline-none focus:border-slate-400 transition-colors truncate" />
+            <button onclick={selectGitPath} class="bg-white hover:bg-slate-50 rounded px-3 py-1 border shadow-sm transition-colors">参照</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {/if}
 </div>
 
 <style>
