@@ -337,7 +337,7 @@
                         <option value={repo}></option>
                       {/each}
                     </datalist>
-                    <button onclick={selectRepoPath} class="bg-white hover:bg-slate-50 rounded px-3 py-1 border shadow-sm transition-colors">参照</button>
+                    <button onclick={selectRepoPath} class="bg-white hover:bg-slate-50 rounded px-3 py-1 border shadow-sm transition-colors whitespace-nowrap shrink-0">参照</button>
                   </div>
                 </div>
             </div>
@@ -395,7 +395,7 @@
             <label class="font-bold text-blue-400 uppercase tracking-tight text-[11px]" for="output-path">保存先 ZIP パス</label>
             <div class="flex gap-2">
                 <input id="output-path" type="text" bind:value={outputPath} placeholder="C:\temp\patch.zip" class="w-full bg-white border-blue-100 border rounded px-3 py-2 outline-none focus:border-blue-400 transition-colors truncate" />
-              <button onclick={selectOutputPath} class="bg-white hover:bg-blue-50 text-blue-600 rounded px-4 py-2 border border-blue-200 shadow-sm transition-colors font-bold">保存先を選択</button>
+              <button onclick={selectOutputPath} class="bg-white hover:bg-blue-50 text-blue-600 rounded px-4 py-2 border border-blue-200 shadow-sm transition-colors font-bold whitespace-nowrap shrink-0">保存先を選択</button>
             </div>
         </div>
     </section>
@@ -439,7 +439,7 @@
           <label class="font-bold text-slate-500 uppercase tracking-tight text-[11px]" for="git-path-modal">Git 実行ファイル (git.exe)</label>
           <div class="flex gap-1">
             <input id="git-path-modal" type="text" bind:value={gitPath} class="w-full bg-slate-50 border rounded px-2 py-1.5 outline-none focus:border-slate-400 transition-colors truncate" />
-            <button onclick={selectGitPath} class="bg-white hover:bg-slate-50 rounded px-3 py-1 border shadow-sm transition-colors">参照</button>
+            <button onclick={selectGitPath} class="bg-white hover:bg-slate-50 rounded px-3 py-1 border shadow-sm transition-colors whitespace-nowrap shrink-0">参照</button>
           </div>
         </div>
       </div>
