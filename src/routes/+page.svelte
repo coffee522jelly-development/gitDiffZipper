@@ -19,8 +19,31 @@
   let message = $state('');
   let isError = $state(false);
   let historyError = $state('');
+  let selectedCommits = $state<number[]>([]);
 
   let store: Store | null = null;
+
+  function toggleCommitSelection(index: number) {
+    if (selectedCommits.includes(index)) {
+      selectedCommits = selectedCommits.filter(i => i !== index);
+    } else {
+      selectedCommits = [...selectedCommits, index];
+      if (selectedCommits.length > 2) {
+        selectedCommits.shift();
+      }
+    }
+
+    if (selectedCommits.length === 0) {
+      fromOffset = 0;
+      toOffset = 0;
+    } else if (selectedCommits.length === 1) {
+      fromOffset = selectedCommits[0];
+      toOffset = selectedCommits[0];
+    } else {
+      fromOffset = Math.max(selectedCommits[0], selectedCommits[1]);
+      toOffset = Math.min(selectedCommits[0], selectedCommits[1]);
+    }
+  }
 
   onMount(async () => {
     store = await Store.load('.settings.dat');
@@ -37,6 +60,12 @@
     if (savedFrom !== null) fromOffset = savedFrom;
     const savedTo = await store.get<number>('toOffset');
     if (savedTo !== null) toOffset = savedTo;
+
+    if (fromOffset === toOffset) {
+      selectedCommits = [fromOffset];
+    } else {
+      selectedCommits = [fromOffset, toOffset];
+    }
   });
 
   async function validateGit() {
@@ -245,7 +274,7 @@
                     <th class="px-3 py-2 border-b w-16 text-slate-400">ID</th>
                     <th class="px-3 py-2 border-b w-20 text-slate-400">Hash</th>
                     <th class="px-3 py-2 border-b text-slate-400">Message</th>
-                    <th class="px-3 py-2 border-b w-24 text-right text-slate-400">Action</th>
+                    <th class="px-1 py-0.5 border-b w-12 text-center text-slate-400">選択</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-50">
@@ -254,9 +283,8 @@
                       <td class="px-3 py-2 font-mono text-slate-400">HEAD~{item.index}</td>
                       <td class="px-3 py-2 font-mono text-slate-400">{item.hash.slice(0,7)}</td>
                       <td class="px-3 py-2 truncate text-slate-700" title={item.message}>{item.message}</td>
-                      <td class="px-3 py-2 text-right space-x-1 whitespace-nowrap">
-                        <button onclick={() => fromOffset = item.index} class="px-1.5 py-0.5 bg-white group-hover:bg-white hover:bg-blue-100 text-blue-600 rounded border border-blue-100 transition-colors">始</button>
-                        <button onclick={() => toOffset = item.index} class="px-1.5 py-0.5 bg-white group-hover:bg-white hover:bg-emerald-100 text-emerald-600 rounded border border-emerald-100 transition-colors">終</button>
+                      <td class="px-1 py-0.5 text-center">
+                        <input type="checkbox" checked={selectedCommits.includes(item.index)} onchange={() => toggleCommitSelection(item.index)} class="w-4 h-4 cursor-pointer accent-blue-600" />
                       </td>
                     </tr>
                   {/each}
