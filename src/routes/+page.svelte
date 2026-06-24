@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
-  import { open, save } from '@tauri-apps/plugin-dialog';
+  import { open, save, confirm } from '@tauri-apps/plugin-dialog';
   import { Store } from '@tauri-apps/plugin-store';
 
   let gitPath = $state('C:\\Program Files\\Git\\cmd\\git.exe');
@@ -219,6 +219,22 @@
       return;
     }
     isLoading = true;
+
+    // Fetch and update the preview before asking for confirmation
+    await updateCommitInfo();
+    isLoading = false;
+
+    // Wait slightly so the UI can re-render the preview before the blocking dialog appears
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    const confirmed = await confirm('プレビューを更新しました。ZIPファイルを作成しますか？', { title: '確認', kind: 'info' });
+    if (!confirmed) {
+      message = 'キャンセルしました';
+      isError = false;
+      return;
+    }
+
+    isLoading = true;
     const excludePatterns = excludeFilter.split(',').map(p => p.trim()).filter(p => p.length > 0);
     try {
       await invoke('create_zip', {
@@ -244,13 +260,6 @@
       isLoading = false;
     }
   }
-
-  $effect(() => {
-    // Only update if repoPath is set
-    if (repoPath && fromOffset >= 0 && toOffset >= 0) {
-      updateCommitInfo();
-    }
-  });
 
 </script>
 
