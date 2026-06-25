@@ -351,12 +351,6 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 gap-4 pt-2">
-                <div class="space-y-1">
-                  <label class="font-bold text-slate-500 uppercase tracking-tight text-[11px]" for="exclude-filter">除外フィルタ (カンマ区切り)</label>
-                  <input id="exclude-filter" type="text" bind:value={excludeFilter} placeholder=".pdf, .zip" class="w-full bg-slate-50 border rounded px-2 py-1.5 outline-none focus:border-slate-400 transition-colors truncate" />
-                </div>
-            </div>
         </div>
 
         <!-- Group: Previews -->
@@ -399,14 +393,6 @@
             </div>
         </div>
 
-        <!-- Group: Output -->
-        <div class="space-y-1 bg-blue-50/50 p-3 rounded-lg border border-blue-100">
-            <label class="font-bold text-blue-400 uppercase tracking-tight text-[11px]" for="output-path">保存先 ZIP パス</label>
-            <div class="flex gap-2">
-                <input id="output-path" type="text" bind:value={outputPath} placeholder="C:\temp\patch.zip" class="w-full bg-white border-blue-100 border rounded px-3 py-2 outline-none focus:border-blue-400 transition-colors truncate" />
-              <button onclick={selectOutputPath} class="bg-white hover:bg-blue-50 text-blue-600 rounded px-4 py-2 border border-blue-200 shadow-sm transition-colors font-bold whitespace-nowrap shrink-0">保存先を選択</button>
-            </div>
-        </div>
     </section>
   </main>
 
@@ -450,6 +436,17 @@
             <input id="git-path-modal" type="text" bind:value={gitPath} class="w-full bg-slate-50 border rounded px-2 py-1.5 outline-none focus:border-slate-400 transition-colors truncate" />
             <button onclick={selectGitPath} class="bg-white hover:bg-slate-50 rounded px-3 py-1 border shadow-sm transition-colors whitespace-nowrap shrink-0">参照</button>
           </div>
+        </div>
+        <div class="space-y-1">
+            <label class="font-bold text-slate-500 uppercase tracking-tight text-[11px]" for="output-path-modal">保存先 ZIP パス</label>
+            <div class="flex gap-1">
+                <input id="output-path-modal" type="text" bind:value={outputPath} placeholder="C:\temp\patch.zip" class="w-full bg-slate-50 border rounded px-2 py-1.5 outline-none focus:border-slate-400 transition-colors truncate" />
+                <button onclick={selectOutputPath} class="bg-white hover:bg-slate-50 rounded px-3 py-1 border shadow-sm transition-colors whitespace-nowrap shrink-0">参照</button>
+            </div>
+        </div>
+        <div class="space-y-1">
+          <label class="font-bold text-slate-500 uppercase tracking-tight text-[11px]" for="exclude-filter-modal">除外フィルタ (カンマ区切り)</label>
+          <input id="exclude-filter-modal" type="text" bind:value={excludeFilter} placeholder=".pdf, .zip" class="w-full bg-slate-50 border rounded px-2 py-1.5 outline-none focus:border-slate-400 transition-colors truncate" />
         </div>
       </div>
     </div>
