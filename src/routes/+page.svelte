@@ -313,20 +313,8 @@
             </div>
 
             <div class="grid grid-cols-2 gap-4 pt-2">
-                <div class="space-y-1">
-                  <span class="block font-bold text-slate-500 uppercase tracking-tight text-xs">抽出範囲 (HEAD~N)</span>
-                  <div class="flex items-center gap-2">
-                    <div class="flex-1 relative">
-                        <span class="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold">FROM</span>
-                        <input type="number" min="0" value={fromOffset} readonly class="w-full bg-slate-100 border rounded pl-12 pr-2 py-1.5 outline-none text-slate-500 font-bold cursor-not-allowed text-sm" />
-                    </div>
-                    <span class="text-slate-300">→</span>
-                    <div class="flex-1 relative">
-                        <span class="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold">TO</span>
-                        <input type="number" min="0" value={toOffset} readonly class="w-full bg-slate-100 border rounded pl-8 pr-2 py-1.5 outline-none text-slate-500 font-bold cursor-not-allowed text-sm" />
-                    </div>
-                    <button onclick={handlePreview} disabled={isLoading || selectedCommits.length === 0} class="bg-blue-600 hover:bg-blue-700 text-white rounded px-4 py-1.5 font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm shadow-sm whitespace-nowrap shrink-0">プレビュー</button>
-                  </div>
+                <div class="space-y-1 flex items-end">
+                  <button onclick={handlePreview} disabled={isLoading || selectedCommits.length === 0} class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded px-4 py-2 font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm shadow-sm">変更をプレビューする</button>
                 </div>
                 <div class="space-y-1">
                   <label class="font-bold text-slate-500 uppercase tracking-tight text-xs" for="exclude-filter">除外フィルタ (カンマ区切り)</label>
@@ -443,11 +431,5 @@
   }
   ::-webkit-scrollbar-thumb:hover {
     background: #cbd5e1;
-  }
-
-  input[type=number]::-webkit-inner-spin-button,
-  input[type=number]::-webkit-outer-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
   }
 </style>
