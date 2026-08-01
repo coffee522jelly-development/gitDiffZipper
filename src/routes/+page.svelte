@@ -15,6 +15,7 @@
   let commitInfo = $state<{hash: string, message: string} | null>(null);
   let changedFiles = $state<string[]>([]);
   let commitHistory = $state<{index: number, hash: string, message: string, date: string}[]>([]);
+  let selectedCommits = $state<number[]>([]);
   let isLoading = $state(false);
   let message = $state('');
   let isError = $state(false);
@@ -30,13 +31,13 @@
       gitPath = savedGitPath;
     }
     const savedExcludeFilter = await store.get<string>('excludeFilter');
-    if (savedExcludeFilter !== null) {
+    if (savedExcludeFilter !== null && savedExcludeFilter !== undefined) {
       excludeFilter = savedExcludeFilter;
     }
     const savedFrom = await store.get<number>('fromOffset');
-    if (savedFrom !== null) fromOffset = savedFrom;
+    if (savedFrom !== null && savedFrom !== undefined) fromOffset = savedFrom;
     const savedTo = await store.get<number>('toOffset');
-    if (savedTo !== null) toOffset = savedTo;
+    if (savedTo !== null && savedTo !== undefined) toOffset = savedTo;
   });
 
   async function validateGit() {
@@ -92,7 +93,7 @@
       if (isValid) {
         repoPath = path;
         message = '';
-        updateCommitInfo();
+        selectedCommits = [];
         updateCommitHistory();
       } else {
         isError = true;
@@ -125,7 +126,6 @@
       await invoke('fetch_remote', { gitPath, repoPath });
       isError = false;
       message = '更新完了';
-      updateCommitInfo();
       updateCommitHistory();
     } catch (e) {
       isError = true;
@@ -208,21 +208,25 @@
     }
   }
 
-  $effect(() => {
-    // Only update if repoPath is set
-    if (repoPath && fromOffset >= 0 && toOffset >= 0) {
+  function handlePreview() {
+    if (selectedCommits.length > 0) {
+      fromOffset = Math.max(...selectedCommits);
+      toOffset = Math.min(...selectedCommits);
       updateCommitInfo();
+    } else {
+      isError = true;
+      message = 'コミットが選択されていません';
     }
-  });
+  }
 
 </script>
 
 <div class="h-screen bg-slate-50 flex flex-col overflow-hidden text-slate-800 text-xs select-none">
   <header class="bg-white border-b px-3 py-2 flex justify-between items-center shrink-0">
     <div class="flex items-center gap-2">
-        <h1 class="font-bold tracking-tight text-sm">gitDiffZipper</h1>
+        <h1 class="font-bold tracking-tight text-base">gitDiffZipper</h1>
         {#if gitVersion}
-            <span class="text-[10px] text-slate-400 truncate max-w-[200px]">({gitVersion})</span>
+            <span class="text-xs text-slate-400 truncate max-w-[200px]">({gitVersion})</span>
         {/if}
     </div>
     <div class="flex gap-2">
@@ -236,28 +240,34 @@
     <!-- Left Column: Commit History -->
     <section class="w-2/5 border-r bg-white flex flex-col min-w-0">
         <div class="px-3 py-2 border-b bg-slate-50/50 flex justify-between items-center">
-            <h2 class="font-bold text-slate-600 uppercase tracking-wider text-[10px]">コミット履歴 (最新20件)</h2>
+            <h2 class="font-bold text-slate-600 uppercase tracking-wider text-xs">コミット履歴 (最新20件)</h2>
         </div>
         <div class="flex-1 overflow-y-auto">
-            <table class="w-full text-[10px] text-left border-collapse table-fixed">
+            <table class="w-full text-xs text-left border-collapse table-fixed">
                 <thead class="bg-white sticky top-0 shadow-sm z-10">
                   <tr>
+                    <th class="px-3 py-2 border-b w-10 text-center text-slate-400">選択</th>
                     <th class="px-3 py-2 border-b w-16 text-slate-400">ID</th>
                     <th class="px-3 py-2 border-b w-20 text-slate-400">Hash</th>
                     <th class="px-3 py-2 border-b text-slate-400">Message</th>
-                    <th class="px-3 py-2 border-b w-24 text-right text-slate-400">Action</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-50">
                   {#each commitHistory as item}
-                    <tr class="hover:bg-blue-50/50 transition-colors group">
+                    <tr class="hover:bg-blue-50/50 transition-colors group cursor-pointer" onclick={() => {
+                        const idx = selectedCommits.indexOf(item.index);
+                        if (idx !== -1) {
+                            selectedCommits.splice(idx, 1);
+                        } else {
+                            selectedCommits.push(item.index);
+                        }
+                    }}>
+                      <td class="px-3 py-2 text-center" onclick={(e) => e.stopPropagation()}>
+                        <input type="checkbox" bind:group={selectedCommits} value={item.index} class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer" />
+                      </td>
                       <td class="px-3 py-2 font-mono text-slate-400">HEAD~{item.index}</td>
                       <td class="px-3 py-2 font-mono text-slate-400">{item.hash.slice(0,7)}</td>
                       <td class="px-3 py-2 truncate text-slate-700" title={item.message}>{item.message}</td>
-                      <td class="px-3 py-2 text-right space-x-1 whitespace-nowrap">
-                        <button onclick={() => fromOffset = item.index} class="px-1.5 py-0.5 bg-white group-hover:bg-white hover:bg-blue-100 text-blue-600 rounded border border-blue-100 transition-colors">始</button>
-                        <button onclick={() => toOffset = item.index} class="px-1.5 py-0.5 bg-white group-hover:bg-white hover:bg-emerald-100 text-emerald-600 rounded border border-emerald-100 transition-colors">終</button>
-                      </td>
                     </tr>
                   {/each}
                   {#if commitHistory.length === 0}
@@ -282,14 +292,14 @@
         <div class="space-y-3 bg-white p-3 rounded-lg border shadow-sm">
             <div class="grid grid-cols-1 gap-3">
                 <div class="space-y-1">
-                  <label class="font-bold text-slate-500 uppercase tracking-tight text-[9px]" for="git-path">Git 実行ファイル (git.exe)</label>
+                  <label class="font-bold text-slate-500 uppercase tracking-tight text-xs" for="git-path">Git 実行ファイル (git.exe)</label>
                   <div class="flex gap-1">
                     <input id="git-path" type="text" bind:value={gitPath} class="w-full bg-slate-50 border rounded px-2 py-1.5 outline-none focus:border-slate-400 transition-colors truncate" />
                     <button onclick={selectGitPath} class="bg-white hover:bg-slate-50 rounded px-3 py-1 border shadow-sm transition-colors">参照</button>
                   </div>
                 </div>
                 <div class="space-y-1">
-                  <label class="font-bold text-slate-500 uppercase tracking-tight text-[9px]" for="repo-path">Git リポジトリ フォルダ</label>
+                  <label class="font-bold text-slate-500 uppercase tracking-tight text-xs" for="repo-path">Git リポジトリ フォルダ</label>
                   <div class="flex gap-1">
                     <input
                       id="repo-path"
@@ -306,21 +316,22 @@
 
             <div class="grid grid-cols-2 gap-4 pt-2">
                 <div class="space-y-1">
-                  <span class="block font-bold text-slate-500 uppercase tracking-tight text-[9px]">抽出範囲 (HEAD~N)</span>
+                  <span class="block font-bold text-slate-500 uppercase tracking-tight text-xs">抽出範囲 (HEAD~N)</span>
                   <div class="flex items-center gap-2">
                     <div class="flex-1 relative">
-                        <span class="absolute left-2 top-1/2 -translate-y-1/2 text-[8px] text-slate-400 font-bold">FROM</span>
-                        <input type="number" min="0" bind:value={fromOffset} class="w-full bg-slate-50 border rounded pl-8 pr-2 py-1.5 outline-none focus:border-blue-400 transition-colors text-blue-600 font-bold" />
+                        <span class="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold">FROM</span>
+                        <input type="number" min="0" value={fromOffset} readonly class="w-full bg-slate-100 border rounded pl-12 pr-2 py-1.5 outline-none text-slate-500 font-bold cursor-not-allowed text-sm" />
                     </div>
                     <span class="text-slate-300">→</span>
                     <div class="flex-1 relative">
-                        <span class="absolute left-2 top-1/2 -translate-y-1/2 text-[8px] text-slate-400 font-bold">TO</span>
-                        <input type="number" min="0" bind:value={toOffset} class="w-full bg-slate-50 border rounded pl-8 pr-2 py-1.5 outline-none focus:border-emerald-400 transition-colors text-emerald-600 font-bold" />
+                        <span class="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold">TO</span>
+                        <input type="number" min="0" value={toOffset} readonly class="w-full bg-slate-100 border rounded pl-8 pr-2 py-1.5 outline-none text-slate-500 font-bold cursor-not-allowed text-sm" />
                     </div>
+                    <button onclick={handlePreview} disabled={isLoading || selectedCommits.length === 0} class="bg-blue-600 hover:bg-blue-700 text-white rounded px-4 py-1.5 font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm shadow-sm whitespace-nowrap shrink-0">プレビュー</button>
                   </div>
                 </div>
                 <div class="space-y-1">
-                  <label class="font-bold text-slate-500 uppercase tracking-tight text-[9px]" for="exclude-filter">除外フィルタ (カンマ区切り)</label>
+                  <label class="font-bold text-slate-500 uppercase tracking-tight text-xs" for="exclude-filter">除外フィルタ (カンマ区切り)</label>
                   <input id="exclude-filter" type="text" bind:value={excludeFilter} placeholder=".pdf, .zip" class="w-full bg-slate-50 border rounded px-2 py-1.5 outline-none focus:border-slate-400 transition-colors truncate" />
                 </div>
             </div>
@@ -330,15 +341,15 @@
         <div class="grid grid-cols-1 gap-4">
             <!-- Commit Info -->
             <div class="space-y-1">
-                <span class="block font-bold text-slate-400 uppercase tracking-tight text-[9px]">選択中のコミット内容</span>
+                <span class="block font-bold text-slate-400 uppercase tracking-tight text-xs">選択中のコミット内容</span>
                 <div class="bg-white border rounded-lg p-3 min-h-[60px] shadow-sm flex flex-col justify-center">
                     {#if commitInfo}
                         <div class="flex items-center gap-2 mb-1">
-                            <span class="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono text-[9px]">{commitInfo.hash.slice(0,10)}</span>
+                            <span class="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono text-xs">{commitInfo.hash.slice(0,10)}</span>
                         </div>
-                        <p class="text-slate-700 leading-snug">{commitInfo.message}</p>
+                        <p class="text-slate-700 leading-snug text-sm">{commitInfo.message}</p>
                     {:else}
-                        <p class="text-slate-300 italic text-center">情報を取得できません</p>
+                        <p class="text-slate-300 italic text-center text-sm">情報を取得できません</p>
                     {/if}
                 </div>
             </div>
@@ -346,10 +357,10 @@
             <!-- Files -->
             <div class="flex flex-col min-h-0">
                 <div class="flex justify-between items-baseline mb-1">
-                    <span class="block font-bold text-slate-400 uppercase tracking-tight text-[9px]">変更ファイル一覧 ({changedFiles.length})</span>
+                    <span class="block font-bold text-slate-400 uppercase tracking-tight text-xs">変更ファイル一覧 ({changedFiles.length})</span>
                 </div>
                 <div class="bg-white border rounded-lg overflow-hidden shadow-sm flex-1 flex flex-col min-h-[150px]">
-                    <div class="flex-1 overflow-y-auto font-mono text-[10px] p-2 leading-relaxed">
+                    <div class="flex-1 overflow-y-auto font-mono text-xs p-2 leading-relaxed">
                         {#if changedFiles.length > 0}
                           <ul class="space-y-0.5">
                             {#each changedFiles as file}
@@ -368,10 +379,10 @@
 
         <!-- Group: Output -->
         <div class="space-y-1 bg-blue-50/50 p-3 rounded-lg border border-blue-100">
-            <label class="font-bold text-blue-400 uppercase tracking-tight text-[9px]" for="output-path">保存先 ZIP パス</label>
+            <label class="font-bold text-blue-400 uppercase tracking-tight text-xs" for="output-path">保存先 ZIP パス</label>
             <div class="flex gap-2">
-                <input id="output-path" type="text" bind:value={outputPath} placeholder="C:\temp\patch.zip" class="w-full bg-white border-blue-100 border rounded px-3 py-2 outline-none focus:border-blue-400 transition-colors truncate" />
-              <button onclick={selectOutputPath} class="bg-white hover:bg-blue-50 text-blue-600 rounded px-4 py-2 border border-blue-200 shadow-sm transition-colors font-bold">保存先を選択</button>
+                <input id="output-path" type="text" bind:value={outputPath} placeholder="C:\temp\patch.zip" class="w-full bg-white border-blue-100 border rounded px-3 py-2 outline-none focus:border-blue-400 transition-colors truncate text-sm" />
+              <button onclick={selectOutputPath} class="bg-white hover:bg-blue-50 text-blue-600 rounded px-4 py-2 border border-blue-200 shadow-sm transition-colors font-bold text-sm whitespace-nowrap shrink-0">保存先を選択</button>
             </div>
         </div>
     </section>
@@ -389,7 +400,7 @@
         {#if message}
             <div class={`flex items-center gap-2 p-2 rounded ${isError ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>
                 <span class="text-lg leading-none">{isError ? '×' : '✓'}</span>
-                <p class="text-[10px] font-bold truncate">{message}</p>
+                <p class="text-sm font-bold truncate">{message}</p>
             </div>
         {/if}
     </div>
