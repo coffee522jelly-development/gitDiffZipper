@@ -247,7 +247,6 @@
                 <thead class="bg-white sticky top-0 shadow-sm z-10">
                   <tr>
                     <th class="px-3 py-2 border-b w-10 text-center text-slate-400">選択</th>
-                    <th class="px-3 py-2 border-b w-16 text-slate-400">ID</th>
                     <th class="px-3 py-2 border-b w-20 text-slate-400">Hash</th>
                     <th class="px-3 py-2 border-b text-slate-400">Message</th>
                   </tr>
@@ -265,7 +264,6 @@
                       <td class="px-3 py-2 text-center" onclick={(e) => e.stopPropagation()}>
                         <input type="checkbox" bind:group={selectedCommits} value={item.index} class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer" />
                       </td>
-                      <td class="px-3 py-2 font-mono text-slate-400">HEAD~{item.index}</td>
                       <td class="px-3 py-2 font-mono text-slate-400">{item.hash.slice(0,7)}</td>
                       <td class="px-3 py-2 truncate text-slate-700" title={item.message}>{item.message}</td>
                     </tr>
