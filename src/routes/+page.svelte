@@ -314,7 +314,9 @@
 
             <div class="grid grid-cols-2 gap-4 pt-2">
                 <div class="space-y-1 flex items-end">
-                  <button onclick={handlePreview} disabled={isLoading || selectedCommits.length === 0} class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded px-4 py-2 font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm shadow-sm">変更をプレビューする</button>
+                  <button onclick={handlePreview} disabled={isLoading || selectedCommits.length === 0} class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded px-4 py-2 font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm shadow-sm">
+                    {isLoading ? '処理中...' : '変更をプレビューする'}
+                  </button>
                 </div>
                 <div class="space-y-1">
                   <label class="font-bold text-slate-500 uppercase tracking-tight text-xs" for="exclude-filter">除外フィルタ (カンマ区切り)</label>
