@@ -156,8 +156,8 @@
     }
   }
 
-  async function updateCommitInfo() {
-    if (!repoPath || !gitPath) return;
+  async function updateCommitInfo(): Promise<boolean> {
+    if (!repoPath || !gitPath) return false;
     isLoading = true;
     try {
       commitInfo = await invoke('get_commit_info', { gitPath, repoPath, fromOffset, toOffset });
@@ -165,11 +165,13 @@
       changedFiles = filesResult.files;
       isError = false;
       message = '';
+      return true;
     } catch (e) {
       commitInfo = null;
       changedFiles = [];
       isError = true;
       message = String(e);
+      return false;
     } finally {
       isLoading = false;
     }
@@ -208,14 +210,19 @@
     }
   }
 
-  function handlePreview() {
-    if (selectedCommits.length > 0) {
-      fromOffset = Math.max(...selectedCommits);
-      toOffset = Math.min(...selectedCommits);
-      updateCommitInfo();
-    } else {
+  async function processZip() {
+    if (selectedCommits.length === 0) {
       isError = true;
       message = 'コミットが選択されていません';
+      return;
+    }
+
+    fromOffset = Math.max(...selectedCommits);
+    toOffset = Math.min(...selectedCommits);
+
+    const success = await updateCommitInfo();
+    if (success) {
+      await createZip();
     }
   }
 
@@ -247,7 +254,6 @@
                 <thead class="bg-white sticky top-0 shadow-sm z-10">
                   <tr>
                     <th class="px-3 py-2 border-b w-10 text-center text-slate-400">選択</th>
-                    <th class="px-3 py-2 border-b w-20 text-slate-400">Hash</th>
                     <th class="px-3 py-2 border-b text-slate-400">Message</th>
                   </tr>
                 </thead>
@@ -264,13 +270,12 @@
                       <td class="px-3 py-2 text-center" onclick={(e) => e.stopPropagation()}>
                         <input type="checkbox" bind:group={selectedCommits} value={item.index} class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer" />
                       </td>
-                      <td class="px-3 py-2 font-mono text-slate-400">{item.hash.slice(0,7)}</td>
                       <td class="px-3 py-2 truncate text-slate-700" title={item.message}>{item.message}</td>
                     </tr>
                   {/each}
                   {#if commitHistory.length === 0}
                     <tr>
-                      <td colspan="4" class="px-3 py-8 text-center italic">
+                      <td colspan="2" class="px-3 py-8 text-center italic">
                         {#if historyError}
                           <span class="text-red-400 font-bold">{historyError}</span>
                         {:else}
@@ -312,12 +317,7 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-4 pt-2">
-                <div class="space-y-1 flex items-end">
-                  <button onclick={handlePreview} disabled={isLoading || selectedCommits.length === 0} class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded px-4 py-2 font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm shadow-sm">
-                    {isLoading ? '処理中...' : '変更をプレビューする'}
-                  </button>
-                </div>
+            <div class="grid grid-cols-1 gap-4 pt-2">
                 <div class="space-y-1">
                   <label class="font-bold text-slate-500 uppercase tracking-tight text-xs" for="exclude-filter">除外フィルタ (カンマ区切り)</label>
                   <input id="exclude-filter" type="text" bind:value={excludeFilter} placeholder=".pdf, .zip" class="w-full bg-slate-50 border rounded px-2 py-1.5 outline-none focus:border-slate-400 transition-colors truncate" />
@@ -394,11 +394,11 @@
     </div>
 
     <button
-      onclick={createZip}
-      disabled={isLoading || !outputPath || !repoPath}
+      onclick={processZip}
+      disabled={isLoading || !outputPath || !repoPath || selectedCommits.length === 0}
       class="bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-lg px-10 py-2.5 transition-all disabled:opacity-50 disabled:bg-slate-300 shadow-lg hover:shadow-xl active:scale-[0.98] whitespace-nowrap text-sm"
     >
-      {isLoading ? '処理中...' : 'ZIPファイルを作成'}
+      {isLoading ? '処理中...' : 'プレビューして出力'}
     </button>
   </footer>
 </div>
