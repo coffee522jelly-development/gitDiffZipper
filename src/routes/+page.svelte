@@ -224,7 +224,6 @@
 <div class="h-screen bg-slate-50 flex flex-col overflow-hidden text-slate-800 text-xs select-none">
   <header class="bg-white border-b px-3 py-2 flex justify-between items-center shrink-0">
     <div class="flex items-center gap-2">
-        <h1 class="font-bold tracking-tight text-base">gitDiffZipper</h1>
         {#if gitVersion}
             <span class="text-xs text-slate-400 truncate max-w-[200px]">({gitVersion})</span>
         {/if}
