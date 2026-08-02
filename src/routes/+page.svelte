@@ -377,15 +377,7 @@
       </div>
     {/if}
 
-    <button
-      onclick={handlePreview}
-      disabled={isLoading || selectedCommits.length === 0}
-      class="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg px-6 py-2.5 transition-all disabled:opacity-50 disabled:bg-slate-300 shadow-sm hover:shadow active:scale-[0.98] whitespace-nowrap text-sm"
-    >
-      {isLoading ? '処理中...' : '変更をプレビューする'}
-    </button>
-
-    <div class="flex-1 min-w-0 flex items-center pl-2">
+    <div class="flex-1 min-w-0">
         {#if message}
             <div class={`flex items-center gap-2 p-2 rounded ${isError ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>
                 <span class="text-lg leading-none">{isError ? '×' : '✓'}</span>
@@ -394,13 +386,23 @@
         {/if}
     </div>
 
-    <button
-      onclick={createZip}
-      disabled={isLoading || !outputPath || !repoPath || !commitInfo}
-      class="bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-lg px-10 py-2.5 transition-all disabled:opacity-50 disabled:bg-slate-300 shadow-lg hover:shadow-xl active:scale-[0.98] whitespace-nowrap text-sm"
-    >
-      {isLoading ? '処理中...' : 'ZIPファイルを作成'}
-    </button>
+    <div class="flex gap-3">
+        <button
+          onclick={handlePreview}
+          disabled={isLoading || selectedCommits.length === 0}
+          class="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg px-6 py-2.5 transition-all disabled:opacity-50 disabled:bg-slate-300 shadow-sm hover:shadow active:scale-[0.98] whitespace-nowrap text-sm"
+        >
+          {isLoading ? '処理中...' : '変更をプレビューする'}
+        </button>
+
+        <button
+          onclick={createZip}
+          disabled={isLoading || !outputPath || !repoPath || !commitInfo}
+          class="bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-lg px-10 py-2.5 transition-all disabled:opacity-50 disabled:bg-slate-300 shadow-lg hover:shadow-xl active:scale-[0.98] whitespace-nowrap text-sm"
+        >
+          {isLoading ? '処理中...' : 'ZIPファイルを作成'}
+        </button>
+    </div>
   </footer>
 </div>
 
