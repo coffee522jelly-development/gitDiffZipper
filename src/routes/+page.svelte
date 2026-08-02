@@ -310,12 +310,7 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-4 pt-2">
-                <div class="space-y-1 flex items-end">
-                  <button onclick={handlePreview} disabled={isLoading || selectedCommits.length === 0} class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded px-4 py-2 font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm shadow-sm">
-                    {isLoading ? '処理中...' : '変更をプレビューする'}
-                  </button>
-                </div>
+            <div class="grid grid-cols-1 gap-4 pt-2">
                 <div class="space-y-1">
                   <label class="font-bold text-slate-500 uppercase tracking-tight text-xs" for="exclude-filter">除外フィルタ (カンマ区切り)</label>
                   <input id="exclude-filter" type="text" bind:value={excludeFilter} placeholder=".pdf, .zip" class="w-full bg-slate-50 border rounded px-2 py-1.5 outline-none focus:border-slate-400 transition-colors truncate" />
@@ -382,7 +377,15 @@
       </div>
     {/if}
 
-    <div class="flex-1 min-w-0">
+    <button
+      onclick={handlePreview}
+      disabled={isLoading || selectedCommits.length === 0}
+      class="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg px-6 py-2.5 transition-all disabled:opacity-50 disabled:bg-slate-300 shadow-sm hover:shadow active:scale-[0.98] whitespace-nowrap text-sm"
+    >
+      {isLoading ? '処理中...' : '変更をプレビューする'}
+    </button>
+
+    <div class="flex-1 min-w-0 flex items-center pl-2">
         {#if message}
             <div class={`flex items-center gap-2 p-2 rounded ${isError ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>
                 <span class="text-lg leading-none">{isError ? '×' : '✓'}</span>
