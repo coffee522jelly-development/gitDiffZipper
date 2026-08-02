@@ -156,8 +156,8 @@
     }
   }
 
-  async function updateCommitInfo(): Promise<boolean> {
-    if (!repoPath || !gitPath) return false;
+  async function updateCommitInfo() {
+    if (!repoPath || !gitPath) return;
     isLoading = true;
     try {
       commitInfo = await invoke('get_commit_info', { gitPath, repoPath, fromOffset, toOffset });
@@ -165,13 +165,11 @@
       changedFiles = filesResult.files;
       isError = false;
       message = '';
-      return true;
     } catch (e) {
       commitInfo = null;
       changedFiles = [];
       isError = true;
       message = String(e);
-      return false;
     } finally {
       isLoading = false;
     }
@@ -210,19 +208,14 @@
     }
   }
 
-  async function processZip() {
-    if (selectedCommits.length === 0) {
+  function handlePreview() {
+    if (selectedCommits.length > 0) {
+      fromOffset = Math.max(...selectedCommits);
+      toOffset = Math.min(...selectedCommits);
+      updateCommitInfo();
+    } else {
       isError = true;
       message = 'コミットが選択されていません';
-      return;
-    }
-
-    fromOffset = Math.max(...selectedCommits);
-    toOffset = Math.min(...selectedCommits);
-
-    const success = await updateCommitInfo();
-    if (success) {
-      await createZip();
     }
   }
 
@@ -253,7 +246,7 @@
             <table class="w-full text-xs text-left border-collapse table-fixed">
                 <thead class="bg-white sticky top-0 shadow-sm z-10">
                   <tr>
-                    <th class="px-3 py-2 border-b w-10 text-center text-slate-400">選択</th>
+                    <th class="px-3 py-2 border-b w-12 text-center text-slate-400 whitespace-nowrap">選択</th>
                     <th class="px-3 py-2 border-b text-slate-400">Message</th>
                   </tr>
                 </thead>
@@ -298,7 +291,7 @@
                   <label class="font-bold text-slate-500 uppercase tracking-tight text-xs" for="git-path">Git 実行ファイル (git.exe)</label>
                   <div class="flex gap-1">
                     <input id="git-path" type="text" bind:value={gitPath} class="w-full bg-slate-50 border rounded px-2 py-1.5 outline-none focus:border-slate-400 transition-colors truncate" />
-                    <button onclick={selectGitPath} class="bg-white hover:bg-slate-50 rounded px-3 py-1 border shadow-sm transition-colors">参照</button>
+                    <button onclick={selectGitPath} class="bg-white hover:bg-slate-50 rounded px-3 py-1 border shadow-sm transition-colors whitespace-nowrap shrink-0">参照</button>
                   </div>
                 </div>
                 <div class="space-y-1">
@@ -312,12 +305,17 @@
                       placeholder="C:\Project"
                       class="w-full bg-slate-50 border rounded px-2 py-1.5 outline-none focus:border-slate-400 transition-colors truncate"
                     />
-                    <button onclick={selectRepoPath} class="bg-white hover:bg-slate-50 rounded px-3 py-1 border shadow-sm transition-colors">参照</button>
+                    <button onclick={selectRepoPath} class="bg-white hover:bg-slate-50 rounded px-3 py-1 border shadow-sm transition-colors whitespace-nowrap shrink-0">参照</button>
                   </div>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 gap-4 pt-2">
+            <div class="grid grid-cols-2 gap-4 pt-2">
+                <div class="space-y-1 flex items-end">
+                  <button onclick={handlePreview} disabled={isLoading || selectedCommits.length === 0} class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded px-4 py-2 font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm shadow-sm">
+                    {isLoading ? '処理中...' : '変更をプレビューする'}
+                  </button>
+                </div>
                 <div class="space-y-1">
                   <label class="font-bold text-slate-500 uppercase tracking-tight text-xs" for="exclude-filter">除外フィルタ (カンマ区切り)</label>
                   <input id="exclude-filter" type="text" bind:value={excludeFilter} placeholder=".pdf, .zip" class="w-full bg-slate-50 border rounded px-2 py-1.5 outline-none focus:border-slate-400 transition-colors truncate" />
@@ -394,11 +392,11 @@
     </div>
 
     <button
-      onclick={processZip}
-      disabled={isLoading || !outputPath || !repoPath || selectedCommits.length === 0}
+      onclick={createZip}
+      disabled={isLoading || !outputPath || !repoPath || !commitInfo}
       class="bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-lg px-10 py-2.5 transition-all disabled:opacity-50 disabled:bg-slate-300 shadow-lg hover:shadow-xl active:scale-[0.98] whitespace-nowrap text-sm"
     >
-      {isLoading ? '処理中...' : 'プレビューして出力'}
+      {isLoading ? '処理中...' : 'ZIPファイルを作成'}
     </button>
   </footer>
 </div>
